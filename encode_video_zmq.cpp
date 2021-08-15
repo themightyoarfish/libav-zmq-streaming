@@ -75,28 +75,6 @@ void initialize_avformat_context(AVFormatContext *&fctx,
   }
 }
 
-void initialize_io_context(AVFormatContext *&fctx, const char *output) {
-  if (!(fctx->oformat->flags & AVFMT_NOFILE)) {
-    /* int ret = avio_open2(&fctx->pb, output, AVIO_FLAG_WRITE, nullptr,
-     * nullptr); */
-    int avio_buffer_size = 4 * KB;
-
-    unsigned char *avio_buffer =
-        static_cast<unsigned char *>(av_malloc(avio_buffer_size));
-
-    AVIOContext *custom_io =
-        avio_alloc_context(avio_buffer, avio_buffer_size, 1, &transmitter,
-                           nullptr, &AVTransmitter::custom_io_write, nullptr);
-
-    if (!custom_io) {
-      std::cout << "Could not open output IO context!" << std::endl;
-      exit(1);
-    }
-
-    fctx->pb = custom_io;
-  }
-}
-
 void set_codec_params(AVFormatContext *&fctx, AVCodecContext *&codec_ctx,
                       double width, double height, int fps) {
   const AVRational dst_fps = {fps, 1};
