@@ -1,6 +1,7 @@
 #include <chrono>
 #include <iostream>
 #include <opencv2/core.hpp>
+#include <thread>
 #include <vector>
 
 extern "C" {
@@ -15,13 +16,41 @@ extern "C" {
 using namespace std;
 constexpr int KB = 1024;
 
+class AVReceiver {
+  zmq::socket_t socket;
+  zmq::context_t ctx;
+
+public:
+  ~AVReceiver() { socket.close(); }
+
+  AVReceiver(const string &host, const unsigned int port) : ctx(1) {
+    socket = zmq::socket_t(ctx, zmq::socket_type::sub);
+    const auto connect_str = string("tcp://") + host + ":" + to_string(port);
+    socket.set(zmq::sockopt::subscribe, "");
+    socket.connect(connect_str);
+    std::cout << "Connected socket to " << connect_str << std::endl;
+  }
+  void receive() {
+    bool more = true;
+    int num_pkts = 0;
+    zmq::message_t incoming;
+    while (more) {
+      socket.recv(incoming, zmq::recv_flags::none);
+      more = socket.get(zmq::sockopt::rcvmore) > 0;
+      ++num_pkts;
+    }
+    std::cout << "Received " << num_pkts << std::endl;
+  }
+};
+
 class AVTransmitter {
 
   zmq::socket_t socket;
   zmq::context_t ctx;
 
 public:
-  AVTransmitter(const string &host, const unsigned int port) {
+  ~AVTransmitter() { socket.close(); }
+  AVTransmitter(const string &host, const unsigned int port) : ctx(1) {
     socket = zmq::socket_t(ctx, zmq::socket_type::pub);
     const auto bind_str = string("tcp://") + host + ":" + to_string(port);
     socket.bind(bind_str);
@@ -45,9 +74,7 @@ public:
 
   void frame_ended() { socket.send(zmq::message_t()); }
 
-  AVIOContext *getContext() {
-    /* int ret = avio_open2(&fctx->pb, output, AVIO_FLAG_WRITE, nullptr,
-     * nullptr); */
+  AVIOContext *getContext(AVFormatContext *fctx) {
     constexpr int avio_buffer_size = 4 * KB;
 
     unsigned char *avio_buffer =
@@ -168,7 +195,6 @@ void stream_video(double width, double height, int fps) {
   av_register_all();
   avformat_network_init();
 
-  const char *output = "file.mkv";
   int ret;
   std::vector<uint8_t> imgbuf(height * width * 3 + 16);
   cv::Mat image(height, width, CV_8UC3, imgbuf.data(), width * 3);
@@ -177,9 +203,10 @@ void stream_video(double width, double height, int fps) {
   AVStream *out_stream = nullptr;
   AVCodecContext *out_codec_ctx = nullptr;
   AVTransmitter transmitter("*", 15001);
+  AVReceiver receiver("localhost", 15001);
 
   initialize_avformat_context(ofmt_ctx, "h264");
-  ofmt_ctx->pb = transmitter.getContext();
+  ofmt_ctx->pb = transmitter.getContext(ofmt_ctx);
 
   out_codec = avcodec_find_encoder(AV_CODEC_ID_H264);
   out_stream = avformat_new_stream(ofmt_ctx, out_codec);
@@ -190,8 +217,6 @@ void stream_video(double width, double height, int fps) {
 
   out_stream->codecpar->extradata = out_codec_ctx->extradata;
   out_stream->codecpar->extradata_size = out_codec_ctx->extradata_size;
-
-  av_dump_format(ofmt_ctx, 0, output, 1);
 
   auto *swsctx = initialize_sample_scaler(out_codec_ctx, width, height);
   auto *frame = allocate_frame_buffer(out_codec_ctx, width, height);
@@ -219,11 +244,12 @@ void stream_video(double width, double height, int fps) {
         av_rescale_q(1, out_codec_ctx->time_base, out_stream->time_base);
     auto tic = std::chrono::system_clock::now();
     AVPacket pkt = write_frame(out_codec_ctx, ofmt_ctx, frame);
-    std::cout << "wrote frame" << std::endl;
     auto toc = std::chrono::system_clock::now();
     ms += std::chrono::duration_cast<std::chrono::milliseconds>(toc - tic)
               .count();
     av_packet_unref(&pkt);
+    transmitter.frame_ended();
+    receiver.receive();
   }
   std::cout << "Avg encoding time " << ms * 1.0 / n_frames << std::endl;
 
@@ -231,7 +257,7 @@ void stream_video(double width, double height, int fps) {
 
   av_frame_free(&frame);
   avcodec_close(out_codec_ctx);
-  avio_close(ofmt_ctx->pb);
+  avio_context_free(&ofmt_ctx->pb);
   avformat_free_context(ofmt_ctx);
 }
 
