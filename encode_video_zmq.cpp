@@ -3,6 +3,7 @@
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
+#include <opencv2/imgcodecs.hpp>
 #include <thread>
 #include <vector>
 
@@ -17,7 +18,9 @@ extern "C" {
 
 using namespace std;
 constexpr int KB = 1024;
-constexpr int waitTime = 500;
+constexpr int waitTime = 100;
+constexpr double width = 2048, height = 1536;
+constexpr int fps = 30;
 
 static std::string av_strerror(int errnum) {
   std::vector<char> v(1024);
@@ -50,8 +53,6 @@ public:
     if (!parser) {
       throw std::runtime_error("Could not init parser");
     }
-    double width = 1280, height = 720;
-    int fps = 30;
     const AVRational dst_fps = {fps, 1};
     dec_ctx->codec_tag = 0;
     dec_ctx->codec_id = AV_CODEC_ID_H264;
@@ -59,7 +60,7 @@ public:
     dec_ctx->width = width;
     dec_ctx->height = height;
     dec_ctx->gop_size = 12;
-    dec_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
+    dec_ctx->pix_fmt = AV_PIX_FMT_GRAY8;
     dec_ctx->framerate = dst_fps;
     dec_ctx->time_base = av_inv_q(dst_fps);
     /* if (fctx->oformat->flags & AVFMT_GLOBALHEADER) { */
@@ -142,8 +143,11 @@ public:
               int type{CV_8UC3};
               std::vector<size_t> steps{
                   static_cast<size_t>(frame->linesize[0])};
-              cv::Mat image(sizes, type, frame->data[0], &steps[0]);
-              cv::cvtColor(m, m, cv::COLOR_YUV2BGR);
+              cv::Mat image(frame->height, frame->width, CV_8UC1,
+                            frame->data[0], frame->linesize[0]);
+              /* cv::Mat image(sizes, type, frame->data[0], &steps[0]); */
+              /* cv::Mat image_converted; */
+              /* cv::cvtColor(image, image_converted, cv::COLOR_YUV2BGR); */
               cv::imshow("decoded", image);
               cv::waitKey(waitTime);
             }
@@ -273,7 +277,7 @@ void initialize_codec_stream(AVStream *&stream, AVCodecContext *&codec_ctx,
 
 SwsContext *initialize_sample_scaler(AVCodecContext *codec_ctx, double width,
                                      double height) {
-  SwsContext *swsctx = sws_getContext(width, height, AV_PIX_FMT_BGR24, width,
+  SwsContext *swsctx = sws_getContext(width, height, AV_PIX_FMT_GRAY8, width,
                                       height, codec_ctx->pix_fmt, SWS_BICUBIC,
                                       nullptr, nullptr, nullptr);
   if (!swsctx) {
@@ -322,20 +326,21 @@ AVPacket write_frame(AVCodecContext *codec_ctx, AVFormatContext *fmt_ctx,
 }
 
 static void generatePattern(cv::Mat &image, unsigned char i) {
-  image.setTo(cv::Scalar(255, 255, 255));
+  image.setTo(cv::Scalar(255));
   float perc_height = 1.0 * i / 255;
   float perc_width = 1.0 * i / 255;
-  image.row(perc_height * image.rows).setTo(cv::Scalar(0, 0, 0));
-  image.col(perc_width * image.cols).setTo(cv::Scalar(0, 0, 0));
+  image.row(perc_height * image.rows).setTo(cv::Scalar(0));
+  image.col(perc_width * image.cols).setTo(cv::Scalar(0));
 }
 
-void stream_video(double width, double height, int fps) {
+void stream_video() {
   av_register_all();
   avformat_network_init();
 
   int ret;
-  std::vector<uint8_t> imgbuf(height * width * 3 + 16);
-  cv::Mat image(height, width, CV_8UC3, imgbuf.data(), width * 3);
+  // extra 16 bytes which swscaler wants when operating on this buffer
+  std::vector<uint8_t> imgbuf(height * width + 16);
+  cv::Mat image(height, width, CV_8UC1, imgbuf.data(), width);
   AVFormatContext *ofmt_ctx = nullptr;
   AVCodec *out_codec = nullptr;
   AVStream *out_stream = nullptr;
@@ -357,7 +362,7 @@ void stream_video(double width, double height, int fps) {
   out_stream->codecpar->extradata_size = out_codec_ctx->extradata_size;
 
   auto *swsctx = initialize_sample_scaler(out_codec_ctx, width, height);
-  auto *frame = allocate_frame_buffer(out_codec_ctx, width, height);
+  AVFrame *frame = allocate_frame_buffer(out_codec_ctx, width, height);
 
   int cur_size;
   uint8_t *cur_ptr;
@@ -371,17 +376,23 @@ void stream_video(double width, double height, int fps) {
   const int stride[] = {static_cast<int>(image.step[0])};
 
   int ms = 0;
+  std::vector<std::string> filenames;
+  cv::glob("/Users/rasmus/Downloads/Hoist encoder/lidar_recording 2/cam_sillbeam_left/2021/05/08/*",
+           filenames);
+  std::sort(filenames.begin(), filenames.end());
 
-  constexpr int n_frames = 100;
+  const int n_frames = filenames.size();
   for (int i = 0; i < n_frames; ++i) {
 
-    generatePattern(image, i);
+    /* generatePattern(image, i); */
+    image = cv::imread(filenames[i]);
+    cv::cvtColor(image, image, cv::COLOR_BGR2GRAY);
     cv::imshow("encoded", image);
     cv::waitKey(waitTime);
-    sws_scale(swsctx, &image.data, stride, 0, image.rows, frame->data,
-              frame->linesize);
-    frame->pts +=
-        av_rescale_q(1, out_codec_ctx->time_base, out_stream->time_base);
+    /* sws_scale(swsctx, &image.data, stride, 0, image.rows, frame->data, */
+    /*           frame->linesize); */
+    /* frame->pts += */
+    /*     av_rescale_q(1, out_codec_ctx->time_base, out_stream->time_base); */
     auto tic = std::chrono::system_clock::now();
     AVPacket pkt = write_frame(out_codec_ctx, ofmt_ctx, frame);
     auto toc = std::chrono::system_clock::now();
@@ -403,10 +414,8 @@ void stream_video(double width, double height, int fps) {
 
 int main() {
   /* av_log_set_level(AV_LOG_DEBUG); */
-  double width = 1280, height = 720;
-  int fps = 30;
 
-  stream_video(width, height, fps);
+  stream_video();
 
   return 0;
 }
