@@ -2,8 +2,8 @@
 #include <iostream>
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
-#include <opencv2/imgproc.hpp>
 #include <opencv2/imgcodecs.hpp>
+#include <opencv2/imgproc.hpp>
 #include <thread>
 #include <vector>
 
@@ -59,7 +59,7 @@ public:
     dec_ctx->codec_type = AVMEDIA_TYPE_VIDEO;
     dec_ctx->width = width;
     dec_ctx->height = height;
-    dec_ctx->gop_size = 12;
+    dec_ctx->gop_size = 0;
     dec_ctx->pix_fmt = AV_PIX_FMT_GRAY8;
     dec_ctx->framerate = dst_fps;
     dec_ctx->time_base = av_inv_q(dst_fps);
@@ -245,7 +245,7 @@ void set_codec_params(AVFormatContext *&fctx, AVCodecContext *&codec_ctx,
   codec_ctx->codec_type = AVMEDIA_TYPE_VIDEO;
   codec_ctx->width = width;
   codec_ctx->height = height;
-  codec_ctx->gop_size = 12;
+  codec_ctx->gop_size = 0;
   codec_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
   codec_ctx->framerate = dst_fps;
   codec_ctx->time_base = av_inv_q(dst_fps);
@@ -271,7 +271,7 @@ void initialize_codec_stream(AVStream *&stream, AVCodecContext *&codec_ctx,
   ret = avcodec_open2(codec_ctx, codec, &codec_options);
   if (ret < 0) {
     std::cout << "Could not open video encoder!" << std::endl;
-    exit(1);
+    return;
   }
 }
 
@@ -377,7 +377,8 @@ void stream_video() {
 
   int ms = 0;
   std::vector<std::string> filenames;
-  cv::glob("/Users/rasmus/Downloads/Hoist encoder/lidar_recording 2/cam_sillbeam_left/2021/05/08/*",
+  cv::glob("/Users/rasmus/Downloads/Hoist encoder/lidar_recording "
+           "2/cam_sillbeam_left/2021/05/08/*",
            filenames);
   std::sort(filenames.begin(), filenames.end());
 
