@@ -143,11 +143,9 @@ public:
               std::vector<size_t> steps{
                   static_cast<size_t>(frame->linesize[0])};
               cv::Mat image(sizes, type, frame->data[0], &steps[0]);
+              cv::cvtColor(m, m, cv::COLOR_YUV2BGR);
               cv::imshow("decoded", image);
               cv::waitKey(waitTime);
-              /* cv::imshow("decoded", m); */
-              /* cv::waitKey(0); */
-              /* cv::cvtColor(m, m, cv::COLOR_YUV2BGR); */
             }
           }
         }
