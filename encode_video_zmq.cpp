@@ -18,7 +18,7 @@ extern "C" {
 
 using namespace std;
 constexpr int KB = 1024;
-constexpr int waitTime = 100;
+constexpr int waitTime = 20;
 constexpr double width = 2048, height = 1536;
 constexpr int fps = 30;
 
@@ -33,6 +33,7 @@ class AVReceiver {
   zmq::context_t ctx;
   AVCodecContext *dec_ctx;
   AVCodecParserContext *parser;
+  int successes = 0;
 
 public:
   AVReceiver(const string &host, const unsigned int port) : ctx(1) {
@@ -59,7 +60,7 @@ public:
     dec_ctx->codec_type = AVMEDIA_TYPE_VIDEO;
     dec_ctx->width = width;
     dec_ctx->height = height;
-    dec_ctx->gop_size = 0;
+    dec_ctx->gop_size = 12;
     dec_ctx->pix_fmt = AV_PIX_FMT_GRAY8;
     dec_ctx->framerate = dst_fps;
     dec_ctx->time_base = av_inv_q(dst_fps);
@@ -101,6 +102,7 @@ public:
         return 0;
       }
     }
+    return 0;
   }
 
   void receive() {
@@ -118,38 +120,44 @@ public:
       if (incoming.to_string().find("packet") != std::string::npos) {
         continue;
       } else {
+        static int i = 0;
         buffer.resize(incoming.size() + AV_INPUT_BUFFER_PADDING_SIZE);
         memcpy(&buffer[0], incoming.data(), incoming.size());
         more = socket.get(zmq::sockopt::rcvmore) > 0;
         /* std::cout << "Attempt to parse " << incoming.size() << " bytes" */
         /*           << std::endl; */
-        int result = av_parser_parse2(
-            this->parser, this->dec_ctx, &pkt->data, &pkt->size,
-            static_cast<std::uint8_t *>(&buffer[0]), incoming.size(),
-            AV_NOPTS_VALUE, AV_NOPTS_VALUE, 0);
-        if (result < 0) {
-          std::cerr << "Parsing packet failed" << std::endl;
-        } else {
-          if (pkt->size > 0) {
-            /* std::cout << "Decoding packet of size " << pkt->size <<
-             * std::endl; */
-            result = this->decode(dec_ctx, frame, pkt);
-            if (result < 0) {
-              std::cerr << "Could not decode: " << av_strerror(result)
-                        << std::endl;
-            } else {
-              std::cout << "Decoded" << std::endl;
-              std::vector<int> sizes = {frame->height, frame->width};
-              int type{CV_8UC3};
-              std::vector<size_t> steps{
-                  static_cast<size_t>(frame->linesize[0])};
-              cv::Mat image(frame->height, frame->width, CV_8UC1,
-                            frame->data[0], frame->linesize[0]);
-              /* cv::Mat image(sizes, type, frame->data[0], &steps[0]); */
-              /* cv::Mat image_converted; */
-              /* cv::cvtColor(image, image_converted, cv::COLOR_YUV2BGR); */
-              cv::imshow("decoded", image);
-              cv::waitKey(waitTime);
+        int in_len = incoming.size();
+        while (in_len) {
+          int result = av_parser_parse2(
+              this->parser, this->dec_ctx, &pkt->data, &pkt->size,
+              static_cast<std::uint8_t *>(&buffer[0]), incoming.size(),
+              AV_NOPTS_VALUE, AV_NOPTS_VALUE, 0);
+          in_len -= result;
+          if (result < 0) {
+            std::cerr << "Parsing packet failed" << std::endl;
+          } else {
+            if (pkt->size > 0) {
+              /* std::cout << "Decoding packet of size " << pkt->size <<
+               * std::endl; */
+              result = this->decode(dec_ctx, frame, pkt);
+              if (result < 0) {
+                std::cerr << "Could not decode: " << av_strerror(result)
+                          << std::endl;
+              } else {
+                std::cout << "Decoded" << std::endl;
+                ++successes;
+                std::vector<int> sizes = {frame->height, frame->width};
+                int type{CV_8UC3};
+                std::vector<size_t> steps{
+                    static_cast<size_t>(frame->linesize[0])};
+                cv::Mat image(frame->height, frame->width, CV_8UC1,
+                              frame->data[0], frame->linesize[0]);
+                /* cv::Mat image(sizes, type, frame->data[0], &steps[0]); */
+                /* cv::Mat image_converted; */
+                /* cv::cvtColor(image, image_converted, cv::COLOR_YUV2BGR); */
+                cv::imshow("decoded", image);
+                cv::waitKey(waitTime);
+              }
             }
           }
         }
@@ -164,6 +172,7 @@ public:
     socket.close();
     av_parser_close(parser);
     avcodec_free_context(&dec_ctx);
+    std::cout << "Decoded " << successes << " frames." << std::endl;
   }
 };
 
@@ -188,7 +197,7 @@ public:
                              int32_t buffer_size) {
 
     AVTransmitter *self = static_cast<AVTransmitter *>(opaque);
-    self->custom_io_write(buffer, buffer_size);
+    return self->custom_io_write(buffer, buffer_size);
   }
 
   int custom_io_write(uint8_t *buffer, int32_t buffer_size) {
@@ -211,6 +220,7 @@ public:
   AVIOContext *getContext(AVFormatContext *fctx) {
     constexpr int avio_buffer_size = 4 * KB;
 
+    // TODO: free buffer
     unsigned char *avio_buffer =
         static_cast<unsigned char *>(av_malloc(avio_buffer_size));
 
@@ -226,14 +236,9 @@ public:
   }
 };
 
-void initialize_avformat_context(AVFormatContext *&fctx,
-                                 const char *format_name) {
-  int ret =
-      avformat_alloc_output_context2(&fctx, nullptr, format_name, nullptr);
-  if (ret < 0) {
-    std::cout << "Could not allocate output format context!" << std::endl;
-    exit(1);
-  }
+int initialize_avformat_context(AVFormatContext *&fctx,
+                                const char *format_name) {
+  return avformat_alloc_output_context2(&fctx, nullptr, format_name, nullptr);
 }
 
 void set_codec_params(AVFormatContext *&fctx, AVCodecContext *&codec_ctx,
@@ -245,7 +250,7 @@ void set_codec_params(AVFormatContext *&fctx, AVCodecContext *&codec_ctx,
   codec_ctx->codec_type = AVMEDIA_TYPE_VIDEO;
   codec_ctx->width = width;
   codec_ctx->height = height;
-  codec_ctx->gop_size = 0;
+  codec_ctx->gop_size = 12;
   codec_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
   codec_ctx->framerate = dst_fps;
   codec_ctx->time_base = av_inv_q(dst_fps);
@@ -254,12 +259,14 @@ void set_codec_params(AVFormatContext *&fctx, AVCodecContext *&codec_ctx,
   }
 }
 
-void initialize_codec_stream(AVStream *&stream, AVCodecContext *&codec_ctx,
-                             AVCodec *&codec) {
+int initialize_codec_stream(AVStream *&stream, AVCodecContext *&codec_ctx,
+                            AVCodec *&codec) {
   int ret = avcodec_parameters_from_context(stream->codecpar, codec_ctx);
   if (ret < 0) {
-    std::cout << "Could not initialize stream codec parameters!" << std::endl;
-    exit(1);
+    /* std::cout << "Could not initialize stream codec parameters!" <<
+     * std::endl; */
+    /* exit(1); */
+    return ret;
   }
 
   AVDictionary *codec_options = nullptr;
@@ -269,10 +276,7 @@ void initialize_codec_stream(AVStream *&stream, AVCodecContext *&codec_ctx,
 
   // open video encoder
   ret = avcodec_open2(codec_ctx, codec, &codec_options);
-  if (ret < 0) {
-    std::cout << "Could not open video encoder!" << std::endl;
-    return;
-  }
+  return ret;
 }
 
 SwsContext *initialize_sample_scaler(AVCodecContext *codec_ctx, double width,
@@ -280,11 +284,6 @@ SwsContext *initialize_sample_scaler(AVCodecContext *codec_ctx, double width,
   SwsContext *swsctx = sws_getContext(width, height, AV_PIX_FMT_GRAY8, width,
                                       height, codec_ctx->pix_fmt, SWS_BICUBIC,
                                       nullptr, nullptr, nullptr);
-  if (!swsctx) {
-    std::cout << "Could not initialize sample scaler!" << std::endl;
-    exit(1);
-  }
-
   return swsctx;
 }
 
@@ -303,26 +302,26 @@ AVFrame *allocate_frame_buffer(AVCodecContext *codec_ctx, double width,
   return frame;
 }
 
-AVPacket write_frame(AVCodecContext *codec_ctx, AVFormatContext *fmt_ctx,
-                     AVFrame *frame) {
+int write_frame(AVCodecContext *codec_ctx, AVFormatContext *fmt_ctx,
+                AVFrame *frame) {
   AVPacket pkt = {0};
   av_init_packet(&pkt);
 
   int ret = avcodec_send_frame(codec_ctx, frame);
   if (ret < 0) {
     std::cout << "Error sending frame to codec context!" << std::endl;
-    exit(1);
+    return ret;
   }
 
   ret = avcodec_receive_packet(codec_ctx, &pkt);
   if (ret < 0) {
     std::cout << "Error receiving packet from codec context!" << std::endl;
-    exit(1);
+    return ret;
   }
 
   av_interleaved_write_frame(fmt_ctx, &pkt);
   /* av_packet_unref(&pkt); */
-  return pkt;
+  return ret;
 }
 
 static void generatePattern(cv::Mat &image, unsigned char i) {
@@ -348,7 +347,13 @@ void stream_video() {
   AVTransmitter transmitter("*", 15001);
   AVReceiver receiver("localhost", 15001);
 
-  initialize_avformat_context(ofmt_ctx, "h264");
+  int success = initialize_avformat_context(ofmt_ctx, "h264");
+  if (success != 0) {
+    std::cout << "Could not allocate output format context! "
+              << av_strerror(success) << std::endl;
+    exit(1);
+  }
+
   ofmt_ctx->pb = transmitter.getContext(ofmt_ctx);
 
   out_codec = avcodec_find_encoder(AV_CODEC_ID_H264);
@@ -356,12 +361,22 @@ void stream_video() {
   out_codec_ctx = avcodec_alloc_context3(out_codec);
 
   set_codec_params(ofmt_ctx, out_codec_ctx, width, height, fps);
-  initialize_codec_stream(out_stream, out_codec_ctx, out_codec);
+  success = initialize_codec_stream(out_stream, out_codec_ctx, out_codec);
+  if (success != 0) {
+    std::cout << "Could not initialize codec stream " << av_strerror(success)
+              << std::endl;
+    exit(1);
+  }
 
   out_stream->codecpar->extradata = out_codec_ctx->extradata;
   out_stream->codecpar->extradata_size = out_codec_ctx->extradata_size;
 
-  auto *swsctx = initialize_sample_scaler(out_codec_ctx, width, height);
+  SwsContext *swsctx = initialize_sample_scaler(out_codec_ctx, width, height);
+  if (!swsctx) {
+    std::cout << "Could not initialize sample scaler!" << std::endl;
+    exit(1);
+  }
+
   AVFrame *frame = allocate_frame_buffer(out_codec_ctx, width, height);
 
   int cur_size;
@@ -369,7 +384,7 @@ void stream_video() {
 
   ret = avformat_write_header(ofmt_ctx, nullptr);
   if (ret < 0) {
-    std::cout << "Could not write header!" << std::endl;
+    std::cout << "Could not write header! " << av_strerror(ret) << std::endl;
     exit(1);
   }
 
@@ -395,15 +410,21 @@ void stream_video() {
     /* frame->pts += */
     /*     av_rescale_q(1, out_codec_ctx->time_base, out_stream->time_base); */
     auto tic = std::chrono::system_clock::now();
-    AVPacket pkt = write_frame(out_codec_ctx, ofmt_ctx, frame);
+    success = write_frame(out_codec_ctx, ofmt_ctx, frame);
+    if (success != 0) {
+      std::cout << "Could not write frame " << av_strerror(success)
+                << std::endl;
+      exit(1);
+    }
     auto toc = std::chrono::system_clock::now();
     ms += std::chrono::duration_cast<std::chrono::milliseconds>(toc - tic)
               .count();
-    av_packet_unref(&pkt);
+    /* av_packet_unref(&pkt); */
     transmitter.frame_ended();
     receiver.receive();
   }
   std::cout << "Avg encoding time " << ms * 1.0 / n_frames << std::endl;
+  std::cout << "Sent " << n_frames << " frames." << std::endl;
 
   av_write_trailer(ofmt_ctx);
 
