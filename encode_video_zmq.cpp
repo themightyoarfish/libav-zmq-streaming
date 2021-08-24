@@ -18,7 +18,7 @@ extern "C" {
 
 using namespace std;
 constexpr int KB = 1024;
-constexpr int waitTime = 20;
+constexpr int waitTime = 50;
 constexpr double width = 2048, height = 1536;
 constexpr int fps = 30;
 
@@ -34,6 +34,7 @@ class AVReceiver {
   AVCodecContext *dec_ctx;
   AVCodecParserContext *parser;
   int successes = 0;
+  size_t bytes_received = 0;
 
 public:
   AVReceiver(const string &host, const unsigned int port) : ctx(1) {
@@ -61,7 +62,7 @@ public:
     dec_ctx->width = width;
     dec_ctx->height = height;
     dec_ctx->gop_size = 12;
-    dec_ctx->pix_fmt = AV_PIX_FMT_GRAY8;
+    dec_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
     dec_ctx->framerate = dst_fps;
     dec_ctx->time_base = av_inv_q(dst_fps);
     /* if (fctx->oformat->flags & AVFMT_GLOBALHEADER) { */
@@ -114,6 +115,7 @@ public:
     AVPacket *pkt = av_packet_alloc();
     while (more) {
       socket.recv(incoming, zmq::recv_flags::none);
+      bytes_received += incoming.size();
       ++num_pkts;
       /* std::cout << "Received packet of size " << incoming.size() <<
        * std::endl; */
@@ -147,10 +149,9 @@ public:
                 std::cout << "Decoded" << std::endl;
                 ++successes;
                 std::vector<int> sizes = {frame->height, frame->width};
-                int type{CV_8UC3};
                 std::vector<size_t> steps{
                     static_cast<size_t>(frame->linesize[0])};
-                cv::Mat image(frame->height, frame->width, CV_8UC1,
+                cv::Mat image(frame->height, frame->width, CV_8UC3,
                               frame->data[0], frame->linesize[0]);
                 /* cv::Mat image(sizes, type, frame->data[0], &steps[0]); */
                 /* cv::Mat image_converted; */
@@ -173,6 +174,7 @@ public:
     av_parser_close(parser);
     avcodec_free_context(&dec_ctx);
     std::cout << "Decoded " << successes << " frames." << std::endl;
+    std::cout << "Received " << bytes_received / 1024 << std::endl;
   }
 };
 
@@ -182,9 +184,9 @@ class AVTransmitter {
   zmq::context_t ctx;
 
   int num_pkts;
+  size_t bytes_sent = 0;
 
 public:
-  ~AVTransmitter() { socket.close(); }
   AVTransmitter(const string &host, const unsigned int port) : ctx(1) {
     socket = zmq::socket_t(ctx, zmq::socket_type::pub);
     const auto bind_str = string("tcp://") + host + ":" + to_string(port);
@@ -201,6 +203,7 @@ public:
   }
 
   int custom_io_write(uint8_t *buffer, int32_t buffer_size) {
+    bytes_sent += buffer_size;
     zmq::message_t msg(buffer_size);
     memcpy(msg.data(), buffer, buffer_size);
     /* std::cout << "Sent packet of size " << msg.size() << std::endl; */
@@ -208,6 +211,10 @@ public:
     socket.send(msg, zmq::send_flags::sndmore);
     num_pkts += 2;
     return 0;
+  }
+  ~AVTransmitter() {
+    socket.close();
+    std::cout << "Sent " << bytes_sent / 1024 << std::endl;
   }
 
   void frame_ended() {
@@ -281,7 +288,7 @@ int initialize_codec_stream(AVStream *&stream, AVCodecContext *&codec_ctx,
 
 SwsContext *initialize_sample_scaler(AVCodecContext *codec_ctx, double width,
                                      double height) {
-  SwsContext *swsctx = sws_getContext(width, height, AV_PIX_FMT_GRAY8, width,
+  SwsContext *swsctx = sws_getContext(width, height, AV_PIX_FMT_BGR24, width,
                                       height, codec_ctx->pix_fmt, SWS_BICUBIC,
                                       nullptr, nullptr, nullptr);
   return swsctx;
@@ -320,16 +327,15 @@ int write_frame(AVCodecContext *codec_ctx, AVFormatContext *fmt_ctx,
   }
 
   av_interleaved_write_frame(fmt_ctx, &pkt);
-  /* av_packet_unref(&pkt); */
   return ret;
 }
 
 static void generatePattern(cv::Mat &image, unsigned char i) {
-  image.setTo(cv::Scalar(255));
+  image.setTo(cv::Scalar(255, 255, 255));
   float perc_height = 1.0 * i / 255;
   float perc_width = 1.0 * i / 255;
-  image.row(perc_height * image.rows).setTo(cv::Scalar(0));
-  image.col(perc_width * image.cols).setTo(cv::Scalar(0));
+  image.row(perc_height * image.rows).setTo(cv::Scalar(0, 0, 0));
+  image.col(perc_width * image.cols).setTo(cv::Scalar(0, 0, 0));
 }
 
 void stream_video() {
@@ -338,8 +344,8 @@ void stream_video() {
 
   int ret;
   // extra 16 bytes which swscaler wants when operating on this buffer
-  std::vector<uint8_t> imgbuf(height * width + 16);
-  cv::Mat image(height, width, CV_8UC1, imgbuf.data(), width);
+  std::vector<uint8_t> imgbuf(height * width * 3 + 16);
+  cv::Mat image(height, width, CV_8UC3, imgbuf.data(), width * 3);
   AVFormatContext *ofmt_ctx = nullptr;
   AVCodec *out_codec = nullptr;
   AVStream *out_stream = nullptr;
@@ -402,7 +408,6 @@ void stream_video() {
 
     /* generatePattern(image, i); */
     image = cv::imread(filenames[i]);
-    cv::cvtColor(image, image, cv::COLOR_BGR2GRAY);
     cv::imshow("encoded", image);
     cv::waitKey(waitTime);
     /* sws_scale(swsctx, &image.data, stride, 0, image.rows, frame->data, */
@@ -419,9 +424,8 @@ void stream_video() {
     auto toc = std::chrono::system_clock::now();
     ms += std::chrono::duration_cast<std::chrono::milliseconds>(toc - tic)
               .count();
-    /* av_packet_unref(&pkt); */
     transmitter.frame_ended();
-    receiver.receive();
+    /* receiver.receive(); */
   }
   std::cout << "Avg encoding time " << ms * 1.0 / n_frames << std::endl;
   std::cout << "Sent " << n_frames << " frames." << std::endl;
