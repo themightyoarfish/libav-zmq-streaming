@@ -1,0 +1,10 @@
+CXX_FILES = encode_video_zmq.cpp
+CXX_FLAGS = -std=c++14 -g -O0
+LIBS = -pthread -lm -framework VideoToolbox -L/usr/local/Cellar/libx11/1.7.2/lib -lX11 -framework CoreFoundation -framework CoreMedia -framework CoreVideo -framework CoreServices -lavformat -lm -lbz2 -lz -Wl,-framework,CoreFoundation -Wl,-framework,Security -pthread -lm  -framework AudioToolbox -lbz2 -lz -llzma -liconv -framework VideoToolbox -lavformat -lavfilter -lswresample -lswscale -lavcodec -lavresample -lavutil -lavdevice -lzmq -lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_imgcodecs -lc++
+INCLUDE_DIRS = -I /usr/local/include/opencv4/ -I ~/Desktop/wat/include
+LIBRARY_DIRS = -L ~/Desktop/wat/lib -L /usr/local/lib/
+CXX = clang++
+EXE_NAME = stream_video_zmq
+
+$(EXE_NAME): $(CXX_FILES)
+	$(CXX) $(CXX_FLAGS) $(INCLUDE_DIRS) $(LIBRARY_DIRS) -o $(EXE_NAME) $(LIBS) $(CXX_FILES)
