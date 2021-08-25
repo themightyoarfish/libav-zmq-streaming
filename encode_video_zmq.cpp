@@ -18,7 +18,7 @@ extern "C" {
 
 using namespace std;
 constexpr int KB = 1024;
-constexpr int waitTime = 50;
+constexpr int waitTime = 10;
 constexpr double width = 2048, height = 1536;
 constexpr int fps = 30;
 
@@ -59,6 +59,7 @@ public:
     dec_ctx->codec_tag = 0;
     dec_ctx->codec_id = AV_CODEC_ID_H264;
     dec_ctx->codec_type = AVMEDIA_TYPE_VIDEO;
+    dec_ctx->bit_rate = 4000000;
     dec_ctx->width = width;
     dec_ctx->height = height;
     dec_ctx->gop_size = 12;
@@ -151,8 +152,34 @@ public:
                 std::vector<int> sizes = {frame->height, frame->width};
                 std::vector<size_t> steps{
                     static_cast<size_t>(frame->linesize[0])};
-                cv::Mat image(frame->height, frame->width, CV_8UC3,
-                              frame->data[0], frame->linesize[0]);
+
+                const auto height = frame->height;
+                const auto width = frame->width;
+                const auto actual_size = cv::Size(width, height);
+                void *y = frame->data[0];
+                void *u = frame->data[1];
+                void *v = frame->data[2];
+
+                cv::Mat y_mat(height, width, CV_8UC1, y, frame->linesize[0]);
+                cv::Mat u_mat(height / 2, width / 2, CV_8UC1, u,
+                              frame->linesize[1]);
+                cv::Mat v_mat(height / 2, width / 2, CV_8UC1, v,
+                              frame->linesize[2]);
+                cv::Mat u_resized, v_resized;
+                cv::resize(u_mat, u_resized, actual_size, 0, 0,
+                           cv::INTER_NEAREST); // repeat u values 4 times
+                cv::resize(v_mat, v_resized, actual_size, 0, 0,
+                           cv::INTER_NEAREST); // repeat v values 4 times
+
+                cv::Mat yuv;
+
+                std::vector<cv::Mat> yuv_channels = {y_mat, u_resized,
+                                                     v_resized};
+                cv::merge(yuv_channels, yuv);
+
+                cv::Mat image;
+                cv::cvtColor(yuv, image, cv::COLOR_YUV2BGR);
+
                 /* cv::Mat image(sizes, type, frame->data[0], &steps[0]); */
                 /* cv::Mat image_converted; */
                 /* cv::cvtColor(image, image_converted, cv::COLOR_YUV2BGR); */
@@ -174,7 +201,7 @@ public:
     av_parser_close(parser);
     avcodec_free_context(&dec_ctx);
     std::cout << "Decoded " << successes << " frames." << std::endl;
-    std::cout << "Received " << bytes_received / 1024 << std::endl;
+    std::cout << "Received " << bytes_received / 1024 << " KB" << std::endl;
   }
 };
 
@@ -214,7 +241,7 @@ public:
   }
   ~AVTransmitter() {
     socket.close();
-    std::cout << "Sent " << bytes_sent / 1024 << std::endl;
+    std::cout << "Sent " << bytes_sent / 1024 << " KB" << std::endl;
   }
 
   void frame_ended() {
@@ -253,6 +280,7 @@ void set_codec_params(AVFormatContext *&fctx, AVCodecContext *&codec_ctx,
   const AVRational dst_fps = {fps, 1};
 
   codec_ctx->codec_tag = 0;
+  codec_ctx->bit_rate = 4000000;
   codec_ctx->codec_id = AV_CODEC_ID_H264;
   codec_ctx->codec_type = AVMEDIA_TYPE_VIDEO;
   codec_ctx->width = width;
@@ -298,9 +326,9 @@ AVFrame *allocate_frame_buffer(AVCodecContext *codec_ctx, double width,
                                double height) {
   AVFrame *frame = av_frame_alloc();
 
-  std::vector<uint8_t> framebuf(
-      av_image_get_buffer_size(codec_ctx->pix_fmt, width, height, 1));
-  av_image_fill_arrays(frame->data, frame->linesize, framebuf.data(),
+  std::uint8_t *framebuf = new uint8_t[av_image_get_buffer_size(
+      codec_ctx->pix_fmt, width, height, 1)];
+  av_image_fill_arrays(frame->data, frame->linesize, framebuf,
                        codec_ctx->pix_fmt, width, height, 1);
   frame->width = width;
   frame->height = height;
@@ -404,16 +432,21 @@ void stream_video() {
   std::sort(filenames.begin(), filenames.end());
 
   const int n_frames = filenames.size();
+  int jpeg_bytes = 0;
   for (int i = 0; i < n_frames; ++i) {
 
     /* generatePattern(image, i); */
     image = cv::imread(filenames[i]);
+    vector<uchar> buf;
+    cv::imencode(".jpg", image, buf);
+    jpeg_bytes += buf.size();
+
     cv::imshow("encoded", image);
     cv::waitKey(waitTime);
-    /* sws_scale(swsctx, &image.data, stride, 0, image.rows, frame->data, */
-    /*           frame->linesize); */
-    /* frame->pts += */
-    /*     av_rescale_q(1, out_codec_ctx->time_base, out_stream->time_base); */
+    sws_scale(swsctx, &image.data, stride, 0, image.rows, frame->data,
+              frame->linesize);
+    frame->pts +=
+        av_rescale_q(1, out_codec_ctx->time_base, out_stream->time_base);
     auto tic = std::chrono::system_clock::now();
     success = write_frame(out_codec_ctx, ofmt_ctx, frame);
     if (success != 0) {
@@ -425,10 +458,12 @@ void stream_video() {
     ms += std::chrono::duration_cast<std::chrono::milliseconds>(toc - tic)
               .count();
     transmitter.frame_ended();
-    /* receiver.receive(); */
+    receiver.receive();
   }
   std::cout << "Avg encoding time " << ms * 1.0 / n_frames << std::endl;
   std::cout << "Sent " << n_frames << " frames." << std::endl;
+  std::cout << "Cumulative jpeg size: " << jpeg_bytes / 1024 << " KB"
+            << std::endl;
 
   av_write_trailer(ofmt_ctx);
 
