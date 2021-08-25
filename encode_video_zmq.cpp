@@ -18,12 +18,13 @@ extern "C" {
 
 using namespace std;
 constexpr int KB = 1024;
-constexpr int waitTime = 10;
-constexpr double width = 2048, height = 1536;
-constexpr int fps = 30;
+constexpr int waitTime = 100;
+constexpr double width = 600, height = 500;
+constexpr int fps = 15;
+constexpr int target_bitrate = 4000000;
 
 static std::string av_strerror(int errnum) {
-  std::vector<char> v(1024);
+  std::vector<char> v(KB);
   av_strerror(errnum, v.data(), v.size());
   return std::string(v.begin(), v.end());
 }
@@ -59,7 +60,7 @@ public:
     dec_ctx->codec_tag = 0;
     dec_ctx->codec_id = AV_CODEC_ID_H264;
     dec_ctx->codec_type = AVMEDIA_TYPE_VIDEO;
-    dec_ctx->bit_rate = 4000000;
+    dec_ctx->bit_rate = target_bitrate;
     dec_ctx->width = width;
     dec_ctx->height = height;
     dec_ctx->gop_size = 12;
@@ -147,7 +148,10 @@ public:
                 std::cerr << "Could not decode: " << av_strerror(result)
                           << std::endl;
               } else {
-                std::cout << "Decoded" << std::endl;
+                static int wat = 0;
+                if (++wat < 10)
+                  return;
+                /* std::cout << "Decoded" << std::endl; */
                 ++successes;
                 std::vector<int> sizes = {frame->height, frame->width};
                 std::vector<size_t> steps{
@@ -201,7 +205,7 @@ public:
     av_parser_close(parser);
     avcodec_free_context(&dec_ctx);
     std::cout << "Decoded " << successes << " frames." << std::endl;
-    std::cout << "Received " << bytes_received / 1024 << " KB" << std::endl;
+    std::cout << "Received " << bytes_received / KB << " KB" << std::endl;
   }
 };
 
@@ -241,7 +245,7 @@ public:
   }
   ~AVTransmitter() {
     socket.close();
-    std::cout << "Sent " << bytes_sent / 1024 << " KB" << std::endl;
+    std::cout << "Sent " << bytes_sent / KB << " KB" << std::endl;
   }
 
   void frame_ended() {
@@ -280,7 +284,7 @@ void set_codec_params(AVFormatContext *&fctx, AVCodecContext *&codec_ctx,
   const AVRational dst_fps = {fps, 1};
 
   codec_ctx->codec_tag = 0;
-  codec_ctx->bit_rate = 4000000;
+  codec_ctx->bit_rate = target_bitrate;
   codec_ctx->codec_id = AV_CODEC_ID_H264;
   codec_ctx->codec_type = AVMEDIA_TYPE_VIDEO;
   codec_ctx->width = width;
@@ -426,9 +430,7 @@ void stream_video() {
 
   int ms = 0;
   std::vector<std::string> filenames;
-  cv::glob("/Users/rasmus/Downloads/Hoist encoder/lidar_recording "
-           "2/cam_sillbeam_left/2021/05/08/*",
-           filenames);
+  cv::glob("/Users/rasmus/Downloads/images/*.jpeg", filenames);
   std::sort(filenames.begin(), filenames.end());
 
   const int n_frames = filenames.size();
@@ -452,17 +454,18 @@ void stream_video() {
     if (success != 0) {
       std::cout << "Could not write frame " << av_strerror(success)
                 << std::endl;
-      exit(1);
+      /* exit(1); */
+    } else {
+      auto toc = std::chrono::system_clock::now();
+      ms += std::chrono::duration_cast<std::chrono::milliseconds>(toc - tic)
+                .count();
+      transmitter.frame_ended();
+      receiver.receive();
     }
-    auto toc = std::chrono::system_clock::now();
-    ms += std::chrono::duration_cast<std::chrono::milliseconds>(toc - tic)
-              .count();
-    transmitter.frame_ended();
-    receiver.receive();
   }
   std::cout << "Avg encoding time " << ms * 1.0 / n_frames << std::endl;
   std::cout << "Sent " << n_frames << " frames." << std::endl;
-  std::cout << "Cumulative jpeg size: " << jpeg_bytes / 1024 << " KB"
+  std::cout << "Cumulative jpeg size: " << jpeg_bytes / KB << " KB"
             << std::endl;
 
   av_write_trailer(ofmt_ctx);
