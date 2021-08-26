@@ -58,18 +58,7 @@ public:
     }
     const AVRational dst_fps = {fps, 1};
     dec_ctx->codec_tag = 0;
-    dec_ctx->codec_id = AV_CODEC_ID_H264;
     dec_ctx->codec_type = AVMEDIA_TYPE_VIDEO;
-    dec_ctx->bit_rate = target_bitrate;
-    dec_ctx->width = width;
-    dec_ctx->height = height;
-    dec_ctx->gop_size = 12;
-    dec_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
-    dec_ctx->framerate = dst_fps;
-    dec_ctx->time_base = av_inv_q(dst_fps);
-    /* if (fctx->oformat->flags & AVFMT_GLOBALHEADER) { */
-    /*   dec_ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER; */
-    /* } */
     int res = avcodec_open2(dec_ctx, codec, nullptr);
     if (res < 0) {
       throw std::runtime_error("Could not open decoder context: " +
