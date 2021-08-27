@@ -30,14 +30,14 @@ void stream_video() {
     auto toc = std::chrono::system_clock::now();
     ms += std::chrono::duration_cast<std::chrono::milliseconds>(toc - tic)
               .count();
-    std::cout << "fps = " << 1 / ((ms / 1000.0) / (i + 1)) << std::endl;
+    /* std::cout << "fps = " << 1 / ((ms / 1000.0) / (i + 1)) << std::endl; */
   }
 }
 
 int main() {
   /* av_log_set_level(AV_LOG_DEBUG); */
   /* av_register_all(); */
-  avformat_network_init();
+  std::cout << "Libav version: " << av_version_info() << std::endl;
 
   stream_video();
 
