@@ -7,7 +7,6 @@ CXX_FLAGS = -std=c++14 -g -O0
 LIBS = -lavformat -lswscale -lavcodec -lavresample -lavutil -lavdevice -lzmq -lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_imgcodecs -lc++
 INCLUDE_DIRS = -I /usr/local/include/opencv4/ -I /usr/local/include/
 LIBRARY_DIRS = -L /usr/local/lib/
-CXX = clang++
 EXE_NAME_SENDER = encode_video_zmq
 EXE_NAME_RECEIVER = decode_video_zmq
 
