@@ -126,8 +126,8 @@ public:
     }
     const int stride[] = {static_cast<int>(image.step[0])};
 
-    cv::imshow("encoded", image);
-    cv::waitKey(20);
+    /* cv::imshow("encoded", image); */
+    /* cv::waitKey(20); */
     sws_scale(this->swsctx, &canvas_.data, stride, 0, canvas_.rows,
               frame_->data, frame_->linesize);
     frame_->pts +=
@@ -144,12 +144,12 @@ public:
   }
 
   ~AVTransmitter() {
+    av_write_trailer(this->ofmt_ctx);
     socket.close();
     av_frame_free(&frame_);
     avcodec_close(this->out_codec_ctx);
     avio_context_free(&(this->ofmt_ctx->pb));
     avformat_free_context(this->ofmt_ctx);
-    av_write_trailer(this->ofmt_ctx);
     std::cout << "Sent " << bytes_sent / KB << " KB" << std::endl;
   }
 
