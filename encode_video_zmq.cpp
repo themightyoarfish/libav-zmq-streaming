@@ -12,19 +12,23 @@
 
 using namespace std;
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
   /* av_log_set_level(AV_LOG_DEBUG); */
   std::cout << "Libav version: " << av_version_info() << std::endl;
 
   AVTransmitter transmitter("*", 15001, 15);
 
-  if (argc < 2) {
-    std::cerr << "Usage: " << argv[0] << " <directory>" << std::endl;
+  if (argc < 3) {
+    std::cerr << "Usage: " << argv[0] << " <directory> <format>" << std::endl;
     std::exit(1);
   }
-  const string directory = argv[1];
+  const string directory = string(argv[1]) + "/";
+  const string ext = argv[2];
+  const string glob_expr = directory + "*." + ext;
+  std::cout << "Globbing: " << glob_expr << std::endl;
   vector<string> filenames;
-  cv::glob(directory + "*.jpeg", filenames);
+  cv::glob(glob_expr, filenames);
+  std::cout << "Found " << filenames.size() << " images" << std::endl;
   sort(filenames.begin(), filenames.end());
 
   const int n_frames = filenames.size();
