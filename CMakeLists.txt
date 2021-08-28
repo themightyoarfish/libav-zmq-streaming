@@ -1,16 +1,22 @@
 project(zmq-streaming C CXX)
+cmake_minimum_required(VERSION 3.15)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
 
 find_package(OpenCV COMPONENTS core highgui imgcodecs imgproc REQUIRED)
-find_package(LIBAV REQUIRED)
+# Caution: due to either buggyness or horrendous design of gcc/ld/whatever, the order of
+# the libraries is important for linking: if lib A depends on stuff from lib B, lib B
+# *must* come after lib A. it does not help if lib B has already been passed previously
+find_package(FFMPEG REQUIRED COMPONENTS  avdevice  avformat swscale
+    avcodec avutil swresample)
+message(STATUS ${FFMPEG_LIBRARIES})
 find_package(cppzmq REQUIRED)
 set(cppzmq_LIBRARIES cppzmq)
 set(LOCAL_INCLUDE_DIRS ${CMAKE_CURRENT_LIST_DIR})
 set(THIRD_PARTY_INCLUDE_DIRS ${OpenCV_INCLUDE_DIRS} ${cppzmq_INCLUDE_DIRS}
-    ${LIBAV_INCLUDE_DIRS})
+    ${FFMPEG_INCLUDE_DIRS})
 set(THIRD_PARTY_LIBRARIES ${OpenCV_LIBRARIES} ${cppzmq_LIBRARIES}
-    ${LIBAV_LIBRARIES})
+    ${FFMPEG_LIBRARIES})
 set(ENCODER_SRC ${CMAKE_CURRENT_LIST_DIR}/encode_video_zmq.cpp)
 set(DECODER_SRC ${CMAKE_CURRENT_LIST_DIR}/decode_video_zmq.cpp)
 add_executable(encode_video_zmq)
