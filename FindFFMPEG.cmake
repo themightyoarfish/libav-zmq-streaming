@@ -187,7 +187,7 @@ if (FFMPEG_INCLUDE_DIRS)
   list(REMOVE_DUPLICATES FFMPEG_INCLUDE_DIRS)
 endif ()
 
-set(libdeps "m;z;lzma;x264;bz2;rt")
+set(libdeps "m;z;lzma;x264;bz2")
 foreach(lib IN LISTS libdeps)
     find_library(${lib}_LIBRARY NAMES ${lib}
     PATHS
