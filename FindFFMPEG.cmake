@@ -203,7 +203,8 @@ foreach(lib IN LISTS libdeps)
       /opt/csw/lib
       /opt/lib
       /usr/freeware/lib64
-      "${FFMPEG_ROOT}/bin")
+      "${FFMPEG_ROOT}/bin"
+      REQUIRED)
     list(APPEND FFMPEG_LIBRARIES ${${lib}_LIBRARY})
     message(STATUS "Found dependency ${${lib}_LIBRARY}")
 endforeach()
