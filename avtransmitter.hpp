@@ -95,7 +95,7 @@ public:
     height_ = image.rows;
     width_ = image.cols;
     avutils::set_codec_params(this->ofmt_ctx, this->out_codec_ctx, width_,
-                              height_, fps_);
+                              height_, fps_, 2e6, 5);
     int success =
         avutils::initialize_codec_stream(out_stream, out_codec_ctx, out_codec);
     if (success != 0) {

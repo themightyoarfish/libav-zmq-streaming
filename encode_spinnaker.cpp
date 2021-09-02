@@ -96,7 +96,7 @@ int setCameraSetting(const string &node, bool val) {
   return 0;
 }
 
-int setPixFmt() { return setCameraSetting("PixelFormat", string("BayerBG8")); }
+int setPixFmt() { return setCameraSetting("PixelFormat", string("BayerRG8")); }
 
 void resetUserSet() {
   std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -129,10 +129,6 @@ int main(int argc, char *argv[]) {
   // EndAcquisition() blocks indefinitely, so can't shut down (used to work)
   std::signal(SIGINT, shutdown_camera);
 
-  constexpr int width = 1280;
-  constexpr int height = 1024;
-  constexpr int offsetX = 0;
-  constexpr int offsetY = 0;
   std::string serial = "19450079";
 
   AVTransmitter transmitter("*", 15001, 15);
@@ -150,6 +146,11 @@ int main(int argc, char *argv[]) {
   camList = spinnaker_system->GetCameras();
 
   camera = camList.GetBySerial(serial);
+
+  if (!camera) {
+      std::cout << "Camera could not be gotten." << std::endl;
+      return 2;
+  }
 
   camList.Clear();
 
@@ -190,19 +191,24 @@ int main(int argc, char *argv[]) {
   std::cout << "Beginning capture." << std::endl;
 
   while (!stop) {
+      std::cout << "Gettin frame" << std::endl;
     try {
-      currentFrame = camera->GetNextImage();
+      currentFrame = camera->GetNextImage(10);
       if (currentFrame->IsIncomplete()) {
+      std::cout << "Incomplete" << std::endl;
         currentFrame->Release();
         currentFrame = nullptr;
       } else if (currentFrame->GetImageStatus() != Spinnaker::IMAGE_NO_ERROR) {
+      std::cout << "Image Error" << std::endl;
         currentFrame->Release();
         currentFrame = nullptr;
       }
     } catch (const Spinnaker::Exception &e) {
+      std::cout << "Exception: " << e.what() << std::endl;
     }
 
     if (currentFrame) {
+      std::cout << "Convert" << std::endl;
       Spinnaker::ImagePtr convertedImage;
 
       convertedImage = currentFrame->Convert(Spinnaker::PixelFormat_RGB8,
@@ -215,6 +221,7 @@ int main(int argc, char *argv[]) {
                     CV_8UC3, currentFrame->GetData(),
                     currentFrame->GetStride());
 
+      std::cout << "Sending image" << std::endl;
       transmitter.encode_frame(image);
       std::cout << "Sent image" << std::endl;
       currentFrame = nullptr;
