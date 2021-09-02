@@ -209,6 +209,30 @@ foreach(lib IN LISTS libdeps)
     message(STATUS "Found dependency ${${lib}_LIBRARY}")
 endforeach()
 
+if (CMAKE_SYSTEM_NAME MATCHES Linux)
+set(libdeps_linux "X11;va;va-x11;va-drm;vdpau")
+foreach(lib IN LISTS libdeps_linux)
+    find_library(${lib}_LIBRARY NAMES ${lib}
+    PATHS
+      "${FFMPEG_ROOT}/lib"
+      ~/Library/Frameworks
+      /Library/Frameworks
+      /usr/local/lib
+      /usr/local/lib64
+      /usr/lib
+      /usr/lib64
+      /sw/lib
+      /opt/local/lib
+      /opt/csw/lib
+      /opt/lib
+      /usr/freeware/lib64
+      "${FFMPEG_ROOT}/bin"
+      REQUIRED)
+    list(APPEND FFMPEG_LIBRARIES ${${lib}_LIBRARY})
+    message(STATUS "Found dependency ${${lib}_LIBRARY}")
+endforeach()
+endif()
+
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(FFMPEG
   REQUIRED_VARS FFMPEG_INCLUDE_DIRS FFMPEG_LIBRARIES ${_ffmpeg_required_vars}
