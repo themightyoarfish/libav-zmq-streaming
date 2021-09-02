@@ -25,32 +25,7 @@ static Spinnaker::ImagePtr currentFrame = nullptr;
 
 static volatile bool stop = false;
 
-void shutdown_camera(int signal) {
-  stop = true;
-  std::cout << "Shitting down cameras." << std::endl;
-
-  if (currentFrame) {
-    try {
-      std::cout << "Release current frame" << std::endl;
-      currentFrame->Release();
-    } catch (Spinnaker::Exception &e) {
-      std::cout << "Caught error " << e.what() << std::endl;
-    }
-    currentFrame = nullptr;
-  }
-  std::cout << "End acquisition" << std::endl;
-  camera->EndAcquisition();
-  std::cout << "Deinit camera" << std::endl;
-  camera->DeInit();
-  // when spinnaker_system  is released in same scope, camera ptr must be
-  // cleaned up before
-  camera = nullptr;
-  std::cout << "Clear camera list" << std::endl;
-  camList.Clear();
-  std::cout << "Release system" << std::endl;
-  spinnaker_system->ReleaseInstance();
-  spinnaker_system = nullptr;
-}
+void shutdown_camera(int signal) { stop = true; }
 
 int setCameraSetting(const string &node, const string &value) {
   INodeMap &nodeMap = camera->GetNodeMap();
@@ -240,14 +215,35 @@ int main(int argc, char *argv[]) {
                     CV_8UC3, currentFrame->GetData(),
                     currentFrame->GetStride());
 
-      auto tic = std::chrono::system_clock::now();
       transmitter.encode_frame(image);
-      auto toc = std::chrono::system_clock::now();
-      /* cout << "fps = " << 1 / ((ms / 1000.0) / (i + 1)) << endl; */
-      /* currentFrame->Release(); */
+      std::cout << "Sent image" << std::endl;
       currentFrame = nullptr;
     }
   }
+
+  std::cout << "Shitting down cameras." << std::endl;
+
+  if (currentFrame) {
+    try {
+      std::cout << "Release current frame" << std::endl;
+      currentFrame->Release();
+    } catch (Spinnaker::Exception &e) {
+      std::cout << "Caught error " << e.what() << std::endl;
+    }
+    currentFrame = nullptr;
+  }
+  std::cout << "End acquisition" << std::endl;
+  camera->EndAcquisition();
+  std::cout << "Deinit camera" << std::endl;
+  camera->DeInit();
+  // when spinnaker_system  is released in same scope, camera ptr must be
+  // cleaned up before
+  camera = nullptr;
+  std::cout << "Clear camera list" << std::endl;
+  camList.Clear();
+  std::cout << "Release system" << std::endl;
+  spinnaker_system->ReleaseInstance();
+  spinnaker_system = nullptr;
 
   return 0;
 }
