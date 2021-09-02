@@ -3,15 +3,12 @@
 #include "avutils.hpp"
 #include <chrono>
 #include <csignal>
-#include <fcntl.h>
 #include <iostream>
-#include <linux/videodev2.h>
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 #include <string>
-#include <sys/ioctl.h>
 #include <thread>
 #include <vector>
 
