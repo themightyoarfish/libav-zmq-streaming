@@ -169,15 +169,13 @@ int main(int argc, char *argv[]) {
   setCameraSetting("AcquisitionFrameRateEnabled", true);
   setCameraSetting("AcquisitionFrameRateEnable", true);
   setCameraSetting("AcquisitionFrameRateAuto", std::string("Off"));
-  setCameraSetting("AcquisitionFrameRate", 60);
+  setCameraSetting("AcquisitionFrameRate", 1);
 
   // Important, otherwise we don't get frames at all
   if (setPixFmt() == -1) {
     throw std::runtime_error("Could not set pixel format");
   }
 
-  // Disable auto exposure to be safe. otherwise we cannot manually set
-  // exposure time.
   setCameraSetting("ExposureAuto", string("On"));
 
   std::cout << "Beginning acquisition" << std::endl;
@@ -191,7 +189,7 @@ int main(int argc, char *argv[]) {
   std::cout << "Beginning capture." << std::endl;
 
   while (!stop) {
-      std::cout << "Gettin frame" << std::endl;
+      /* std::cout << "Gettin frame" << std::endl; */
     try {
       currentFrame = camera->GetNextImage(10);
       if (currentFrame->IsIncomplete()) {
@@ -204,11 +202,11 @@ int main(int argc, char *argv[]) {
         currentFrame = nullptr;
       }
     } catch (const Spinnaker::Exception &e) {
-      std::cout << "Exception: " << e.what() << std::endl;
+      /* std::cout << "Exception: " << e.what() << std::endl; */
     }
 
     if (currentFrame) {
-      std::cout << "Convert" << std::endl;
+      /* std::cout << "Convert" << std::endl; */
       Spinnaker::ImagePtr convertedImage;
 
       convertedImage = currentFrame->Convert(Spinnaker::PixelFormat_RGB8,
@@ -221,9 +219,9 @@ int main(int argc, char *argv[]) {
                     CV_8UC3, currentFrame->GetData(),
                     currentFrame->GetStride());
 
-      std::cout << "Sending image" << std::endl;
+      /* std::cout << "Sending image" << std::endl; */
       transmitter.encode_frame(image);
-      std::cout << "Sent image" << std::endl;
+      /* std::cout << "Sent image" << std::endl; */
       currentFrame = nullptr;
     }
   }

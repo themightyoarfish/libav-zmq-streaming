@@ -45,6 +45,7 @@ public:
                 unsigned int fps)
       : ctx(1), fps_(fps) {
     socket = zmq::socket_t(ctx, zmq::socket_type::pub);
+    socket.set(zmq::sockopt::sndhwm, 1);
     const auto bind_str =
         std::string("tcp://") + host + ":" + std::to_string(port);
     socket.bind(bind_str);
@@ -95,7 +96,7 @@ public:
     height_ = image.rows;
     width_ = image.cols;
     avutils::set_codec_params(this->ofmt_ctx, this->out_codec_ctx, width_,
-                              height_, fps_, 2e6, 5);
+                              height_, fps_, 8e6, 12);
     int success =
         avutils::initialize_codec_stream(out_stream, out_codec_ctx, out_codec);
     if (success != 0) {
@@ -103,19 +104,21 @@ public:
                                   avutils::av_strerror(success));
     }
 
-    swsctx =
-        avutils::initialize_sample_scaler(this->out_codec_ctx, width_, height_);
+    if (!swsctx) {
+      swsctx = avutils::initialize_sample_scaler(this->out_codec_ctx, width_,
+                                                 height_);
+    }
     if (!swsctx) {
       throw std::runtime_error("Could not initialize sample scaler!");
     }
     if (!frame_) {
       frame_ =
           avutils::allocate_frame_buffer(this->out_codec_ctx, width_, height_);
-    }
-    success = avformat_write_header(this->ofmt_ctx, nullptr);
-    if (success != 0) {
-      std::runtime_error("Could not write header! " +
-                         avutils::av_strerror(success));
+      success = avformat_write_header(this->ofmt_ctx, nullptr);
+      if (success != 0) {
+        std::runtime_error("Could not write header! " +
+                           avutils::av_strerror(success));
+      }
     }
     if (imgbuf.empty()) {
       imgbuf.resize(height_ * width_ * 3 + 16);
@@ -139,6 +142,14 @@ public:
       throw std::runtime_error("Could not write frame " +
                                avutils::av_strerror(success));
     } else {
+      using namespace std::chrono;
+      std::cout << "Encoded at " << std::setprecision(5)
+          << std::fixed
+                << duration_cast<milliseconds>(
+                       system_clock::now().time_since_epoch())
+                           .count() /
+                       1000.0
+                << std::endl;
       this->frame_ended();
     }
   }
