@@ -25,6 +25,7 @@ public:
     socket = zmq::socket_t(ctx, zmq::socket_type::sub);
     const auto connect_str = std::string("tcp://") + host + ":" + std::to_string(port);
     socket.set(zmq::sockopt::subscribe, "");
+    socket.set(zmq::sockopt::rcvhwm, 2);
     socket.connect(connect_str);
     std::cout << "Connected socket to " << connect_str << std::endl;
     const AVCodec *codec = avcodec_find_decoder(AV_CODEC_ID_H264);
