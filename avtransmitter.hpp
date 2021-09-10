@@ -52,13 +52,14 @@ public:
     std::cout << "Bound socket to " << bind_str << std::endl;
     num_pkts = 0;
 
-    int success = avutils::initialize_avformat_context(this->ofmt_ctx, "h264");
+    AVOutputFormat *format = av_guess_format("rtp", nullptr, nullptr);
+    int success = avutils::initialize_avformat_context(
+        this->ofmt_ctx, format, "rtp://192.168.19.201:49990");
+
     if (success != 0) {
       throw std::runtime_error("Could not allocate output format context! " +
                                avutils::av_strerror(success));
     }
-
-    this->ofmt_ctx->pb = this->getContext(ofmt_ctx);
 
     this->out_codec = avcodec_find_encoder(AV_CODEC_ID_H264);
     if (!this->out_codec) {
@@ -74,47 +75,46 @@ public:
     }
   }
 
-  static int custom_io_write(void *opaque, uint8_t *buffer,
-                             int32_t buffer_size) {
-
-    AVTransmitter *self = static_cast<AVTransmitter *>(opaque);
-    return self->custom_io_write(buffer, buffer_size);
-  }
-
-  int custom_io_write(uint8_t *buffer, int32_t buffer_size) {
-    bytes_sent += buffer_size;
-    zmq::message_t msg(buffer_size);
-    memcpy(msg.data(), buffer, buffer_size);
-    /* std::cout << "Sent packet of size " << msg.size() << std::endl; */
-    socket.send(zmq::message_t("packet"), zmq::send_flags::sndmore);
-    socket.send(msg, zmq::send_flags::sndmore);
-    num_pkts += 2;
-    return 0;
-  }
-
   void encode_frame(const cv::Mat &image) {
-    height_ = image.rows;
-    width_ = image.cols;
-    avutils::set_codec_params(this->ofmt_ctx, this->out_codec_ctx, width_,
-                              height_, fps_, 8e6, 12);
-    int success =
-        avutils::initialize_codec_stream(out_stream, out_codec_ctx, out_codec);
-    if (success != 0) {
-      throw std::invalid_argument("Could not initialize codec stream " +
-                                  avutils::av_strerror(success));
-    }
+    static bool first_time = true;
+    if (first_time) {
+      first_time = false;
+      height_ = image.rows;
+      width_ = image.cols;
+      avutils::set_codec_params(this->ofmt_ctx, this->out_codec_ctx, width_,
+                                height_, fps_, 2e6, 6);
+      int success = avutils::initialize_codec_stream(this->out_stream,
+                                                     out_codec_ctx, out_codec);
+      this->out_stream->time_base.num = 1;
+      this->out_stream->time_base.den = fps_;
+      avio_open(&(this->ofmt_ctx->pb), this->ofmt_ctx->filename,
+                AVIO_FLAG_WRITE);
 
-    if (!swsctx) {
-      swsctx = avutils::initialize_sample_scaler(this->out_codec_ctx, width_,
-                                                 height_);
-    }
-    if (!swsctx) {
-      throw std::runtime_error("Could not initialize sample scaler!");
+      /* Write a file for VLC */
+      char buf[200000];
+      AVFormatContext *ac[] = {this->ofmt_ctx};
+      av_sdp_create(ac, 1, buf, 20000);
+      printf("sdp:\n%s\n", buf);
+      FILE *fsdp = fopen("test.sdp", "w");
+      fprintf(fsdp, "%s", buf);
+      fclose(fsdp);
+
+      if (success != 0) {
+        throw std::invalid_argument("Could not initialize codec stream " +
+                                    avutils::av_strerror(success));
+      }
+      if (!swsctx) {
+        swsctx = avutils::initialize_sample_scaler(this->out_codec_ctx, width_,
+                                                   height_);
+      }
+      if (!swsctx) {
+        throw std::runtime_error("Could not initialize sample scaler!");
+      }
     }
     if (!frame_) {
       frame_ =
           avutils::allocate_frame_buffer(this->out_codec_ctx, width_, height_);
-      success = avformat_write_header(this->ofmt_ctx, nullptr);
+      int success = avformat_write_header(this->ofmt_ctx, nullptr);
       if (success != 0) {
         std::runtime_error("Could not write header! " +
                            avutils::av_strerror(success));
@@ -134,17 +134,16 @@ public:
     sws_scale(this->swsctx, &canvas_.data, stride, 0, canvas_.rows,
               frame_->data, frame_->linesize);
     frame_->pts +=
-        av_rescale_q(1, out_codec_ctx->time_base, out_stream->time_base);
+        av_rescale_q(1, out_codec_ctx->time_base, this->out_stream->time_base);
 
-    success =
+    int success =
         avutils::write_frame(this->out_codec_ctx, this->ofmt_ctx, this->frame_);
     if (success != 0) {
       throw std::runtime_error("Could not write frame " +
                                avutils::av_strerror(success));
     } else {
       using namespace std::chrono;
-      std::cout << "Encoded at " << std::setprecision(5)
-          << std::fixed
+      std::cout << "Encoded at " << std::setprecision(5) << std::fixed
                 << duration_cast<milliseconds>(
                        system_clock::now().time_since_epoch())
                            .count() /
@@ -169,24 +168,6 @@ public:
     socket.send(zmq::message_t());
     /* std::cout << "Sent " << ++num_pkts << std::endl; */
     num_pkts = 0;
-  }
-
-  AVIOContext *getContext(AVFormatContext *fctx) {
-    constexpr int avio_buffer_size = 4 * KB;
-
-    // TODO: free buffer
-    unsigned char *avio_buffer =
-        static_cast<unsigned char *>(av_malloc(avio_buffer_size));
-
-    AVIOContext *custom_io =
-        avio_alloc_context(avio_buffer, avio_buffer_size, 1, this, nullptr,
-                           &AVTransmitter::custom_io_write, nullptr);
-
-    if (!custom_io) {
-      std::cout << "Could not open output IO context!" << std::endl;
-      return nullptr;
-    }
-    return custom_io;
   }
 };
 

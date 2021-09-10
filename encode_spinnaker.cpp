@@ -96,7 +96,17 @@ int setCameraSetting(const string &node, bool val) {
   return 0;
 }
 
-int setPixFmt() { return setCameraSetting("PixelFormat", string("BayerRG8")); }
+int setPixFmt() {
+  try {
+    return setCameraSetting("PixelFormat", string("BayerBG8"));
+  } catch (const std::exception &) {
+  }
+  try {
+    return setCameraSetting("PixelFormat", string("BayerRG8"));
+  } catch (const std::exception &) {
+  }
+  return -1;
+}
 
 void resetUserSet() {
   std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -126,7 +136,7 @@ int setWhiteBalanceAuto() {
 }
 
 int main(int argc, char *argv[]) {
-  // EndAcquisition() blocks indefinitely, so can't shut down (used to work)
+  avformat_network_init();
   std::signal(SIGINT, shutdown_camera);
 
   std::string serial = "19450079";
@@ -148,8 +158,8 @@ int main(int argc, char *argv[]) {
   camera = camList.GetBySerial(serial);
 
   if (!camera) {
-      std::cout << "Camera could not be gotten." << std::endl;
-      return 2;
+    std::cout << "Camera could not be gotten." << std::endl;
+    return 2;
   }
 
   camList.Clear();
@@ -184,20 +194,18 @@ int main(int argc, char *argv[]) {
   // wait a bit for camera to start streaming
   std::this_thread::sleep_for(std::chrono::seconds(1));
 
-  std::cout << "Setting up stream " << std::endl;
-
   std::cout << "Beginning capture." << std::endl;
 
   while (!stop) {
-      /* std::cout << "Gettin frame" << std::endl; */
+    /* std::cout << "Gettin frame" << std::endl; */
     try {
       currentFrame = camera->GetNextImage(10);
       if (currentFrame->IsIncomplete()) {
-      std::cout << "Incomplete" << std::endl;
+        std::cout << "Incomplete" << std::endl;
         currentFrame->Release();
         currentFrame = nullptr;
       } else if (currentFrame->GetImageStatus() != Spinnaker::IMAGE_NO_ERROR) {
-      std::cout << "Image Error" << std::endl;
+        std::cout << "Image Error" << std::endl;
         currentFrame->Release();
         currentFrame = nullptr;
       }

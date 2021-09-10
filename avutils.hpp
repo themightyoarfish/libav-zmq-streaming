@@ -29,8 +29,9 @@ static std::string av_strerror(int errnum) {
 }
 
 static int initialize_avformat_context(AVFormatContext *&fctx,
-                                       const char *format_name) {
-  return avformat_alloc_output_context2(&fctx, nullptr, format_name, nullptr);
+                                       AVOutputFormat *format = nullptr,
+                                       const char *out_file = nullptr) {
+  return avformat_alloc_output_context2(&fctx, format, format->name, out_file);
 }
 
 static void set_codec_params(AVFormatContext *&fctx, AVCodecContext *&codec_ctx,
