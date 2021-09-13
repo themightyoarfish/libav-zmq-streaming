@@ -44,7 +44,7 @@ void AVTransmitter::encode_frame(const cv::Mat &image) {
     first_time = false;
     height_ = image.rows;
     width_ = image.cols;
-    avutils::set_codec_params(this->ofmt_ctx, this->out_codec_ctx, width_,
+    avutils::set_codec_params(this->out_codec_ctx, width_,
                               height_, fps_, 2e6, 6);
     int success = avutils::initialize_codec_stream(this->out_stream,
                                                    out_codec_ctx, out_codec);
@@ -101,8 +101,8 @@ void AVTransmitter::encode_frame(const cv::Mat &image) {
   int success =
       avutils::write_frame(this->out_codec_ctx, this->ofmt_ctx, this->frame_);
   if (success != 0) {
-    throw std::runtime_error("Could not write frame " +
-                             avutils::av_strerror2(success));
+    std::cerr << "Could not write frame: " << avutils::av_strerror2(success)
+              << ". Maybe send more input. " << std::endl;
   } else {
     /* using namespace std::chrono; */
     /* std::cout << "Encoded at " << std::setprecision(5) << std::fixed */
