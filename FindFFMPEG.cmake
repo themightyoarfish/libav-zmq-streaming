@@ -233,6 +233,20 @@ foreach(lib IN LISTS libdeps_linux)
 endforeach()
 endif()
 
+if (CMAKE_SYSTEM_NAME MATCHES Darwin)
+    set(libdeps_osx
+        "CoreServices;CoreFoundation;AudioUnit;AudioToolbox;CoreAudio;CoreMedia;CoreVideo;VideoToolbox;iconv;Security")
+foreach(lib IN LISTS libdeps_osx)
+    find_library(${lib}_LIBRARY NAMES ${lib}
+    PATHS
+      ~/Library/Frameworks
+      /Library/Frameworks
+      REQUIRED)
+    list(APPEND FFMPEG_LIBRARIES ${${lib}_LIBRARY})
+    message(STATUS "Found dependency ${${lib}_LIBRARY}")
+endforeach()
+endif()
+
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(FFMPEG
   REQUIRED_VARS FFMPEG_INCLUDE_DIRS FFMPEG_LIBRARIES ${_ffmpeg_required_vars}
