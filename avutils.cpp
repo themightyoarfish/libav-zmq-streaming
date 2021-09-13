@@ -60,16 +60,22 @@ int initialize_codec_stream(AVStream *&stream, AVCodecContext *&codec_ctx,
     /* exit(1); */
     return ret;
   }
+  if (codec_ctx->extradata_size > 0) {
+    std::cout << "Extradata present in AVCodecContext" << std::endl;
+  } else {
+    std::cout << "No Extradata present in AVFormatContext" << std::endl;
+  }
+
+  if (stream->codecpar->extradata_size > 0) {
+    std::cout << "Extradata present in AVStream" << std::endl;
+  } else {
+    std::cout << "No Extradata present in AVStream" << std::endl;
+  }
 
   AVDictionary *codec_options = nullptr;
-  av_dict_set(&codec_options, "quality", "realtime", 0);
-  av_dict_set(&codec_options, "deadline", "realtime", 0);
-  av_dict_set(&codec_options, "tune-content", "screen", 0);
-  av_dict_set_int(&codec_options, "speed", 8, 0);
-  av_dict_set_int(&codec_options, "threads", 2, 0);
-  av_dict_set_int(&codec_options, "lag-in-frames", 0, 0);
-  /* av_dict_set(&codec_options, "preset", "ultrafast", 0); */
-  /* av_dict_set(&codec_options, "tune", "zerolatency", 0); */
+  av_dict_set(&codec_options, "profile", "high", 0);
+  av_dict_set(&codec_options, "preset", "ultrafast", 0);
+  av_dict_set(&codec_options, "tune", "zerolatency", 0);
 
   // open video encoder
   ret = avcodec_open2(codec_ctx, codec, &codec_options);
@@ -82,7 +88,7 @@ int initialize_codec_stream(AVStream *&stream, AVCodecContext *&codec_ctx,
     all_found = false;
   }
   if (all_found) {
-      std::cout << "All codec options found." << std::endl;
+    std::cout << "All codec options found." << std::endl;
   }
   return ret;
 }

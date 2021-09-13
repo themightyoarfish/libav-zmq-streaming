@@ -18,7 +18,7 @@ AVTransmitter::AVTransmitter(const std::string &host, const unsigned int port,
   const auto url = std::string("rtp://") + host + ":" + std::to_string(port);
   int success =
       avutils::initialize_avformat_context(this->ofmt_ctx, format, url.c_str());
-  this->ofmt_ctx->strict_std_compliance = FF_COMPLIANCE_EXPERIMENTAL;
+  /* this->ofmt_ctx->strict_std_compliance = FF_COMPLIANCE_EXPERIMENTAL; */
 
   if (success != 0) {
     throw std::runtime_error("Could not allocate output format context! " +
@@ -34,6 +34,8 @@ AVTransmitter::AVTransmitter(const std::string &host, const unsigned int port,
     throw std::runtime_error("Could not find stream");
   }
   this->out_codec_ctx = avcodec_alloc_context3(this->out_codec);
+  // this cannot be set otherwise h264 packets arent streamable
+  this->out_codec_ctx->flags &= ~AV_CODEC_FLAG_GLOBAL_HEADER;
   if (!this->out_codec_ctx) {
     throw std::runtime_error("Could not allocate output codec context");
   }
@@ -45,8 +47,8 @@ void AVTransmitter::encode_frame(const cv::Mat &image) {
     first_time = false;
     height_ = image.rows;
     width_ = image.cols;
-    avutils::set_codec_params(this->out_codec_ctx, width_,
-                              height_, fps_, 2e6, 6);
+    avutils::set_codec_params(this->out_codec_ctx, width_, height_, fps_, 2e6,
+                              6);
     int success = avutils::initialize_codec_stream(this->out_stream,
                                                    out_codec_ctx, out_codec);
     this->out_stream->time_base.num = 1;
