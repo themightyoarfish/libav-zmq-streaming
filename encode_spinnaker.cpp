@@ -139,16 +139,21 @@ int main(int argc, char *argv[]) {
   avformat_network_init();
   std::signal(SIGINT, shutdown_camera);
 
-  std::string serial = "19450079";
+  std::string serial;
+  std::string rtp_rcv_host;
+unsigned int rtp_rcv_port;
 
-  AVTransmitter transmitter("*", 15001, 15);
-
-  if (argc > 1) {
+  if (argc > 3) {
     serial = argv[1];
-  } else {
-    std::cout << "Usage: " << argv[0] << " <serial>" << std::endl;
+    rtp_rcv_host = argv[2];
+    rtp_rcv_port = std::atoi(argv[3]);
+  }
+  else {
+    std::cout << "Usage: " << argv[0] << " <serial> <host> <port>" << std::endl;
     return 1;
   }
+  constexpr int fps = 10;
+  AVTransmitter transmitter(rtp_rcv_host, rtp_rcv_port, fps);
 
   spinnaker_system = Spinnaker::System::GetInstance();
 
@@ -179,7 +184,7 @@ int main(int argc, char *argv[]) {
   setCameraSetting("AcquisitionFrameRateEnabled", true);
   setCameraSetting("AcquisitionFrameRateEnable", true);
   setCameraSetting("AcquisitionFrameRateAuto", std::string("Off"));
-  setCameraSetting("AcquisitionFrameRate", 1);
+  setCameraSetting("AcquisitionFrameRate", fps);
 
   // Important, otherwise we don't get frames at all
   if (setPixFmt() == -1) {
@@ -199,7 +204,7 @@ int main(int argc, char *argv[]) {
   while (!stop) {
     /* std::cout << "Gettin frame" << std::endl; */
     try {
-      currentFrame = camera->GetNextImage(10);
+      currentFrame = camera->GetNextImage(100);
       if (currentFrame->IsIncomplete()) {
         std::cout << "Incomplete" << std::endl;
         currentFrame->Release();
