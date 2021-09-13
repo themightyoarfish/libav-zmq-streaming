@@ -93,6 +93,7 @@ AVFrame *allocate_frame_buffer(AVCodecContext *codec_ctx, double width,
   frame->width = width;
   frame->height = height;
   frame->format = static_cast<int>(codec_ctx->pix_fmt);
+  frame->pts = 0;
 
   return frame;
 }

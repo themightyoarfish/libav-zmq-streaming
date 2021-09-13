@@ -51,6 +51,8 @@ int main(int argc, char *argv[]) {
     auto toc = chrono::system_clock::now();
     ms += chrono::duration_cast<chrono::milliseconds>(toc - tic).count();
     /* cout << "fps = " << 1 / ((ms / 1000.0) / (i + 1)) << endl; */
+    std::this_thread::sleep_for(
+        std::chrono::milliseconds(static_cast<int>(1000.0 / fps)));
   }
   return 0;
 }
