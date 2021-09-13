@@ -141,14 +141,13 @@ int main(int argc, char *argv[]) {
 
   std::string serial;
   std::string rtp_rcv_host;
-unsigned int rtp_rcv_port;
+  unsigned int rtp_rcv_port;
 
   if (argc > 3) {
     serial = argv[1];
     rtp_rcv_host = argv[2];
     rtp_rcv_port = std::atoi(argv[3]);
-  }
-  else {
+  } else {
     std::cout << "Usage: " << argv[0] << " <serial> <host> <port>" << std::endl;
     return 1;
   }

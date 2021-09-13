@@ -16,14 +16,24 @@ int main(int argc, char *argv[]) {
   /* av_log_set_level(AV_LOG_DEBUG); */
   std::cout << "Libav version: " << av_version_info() << std::endl;
 
-  AVTransmitter transmitter("*", 15001, 15);
+  std::string directory;
+  std::string ext;
+  std::string rtp_rcv_host;
+  unsigned int rtp_rcv_port;
 
-  if (argc < 3) {
-    std::cerr << "Usage: " << argv[0] << " <directory> <format>" << std::endl;
-    std::exit(1);
+  if (argc > 3) {
+    directory = argv[1];
+    ext = argv[2];
+    rtp_rcv_host = argv[3];
+    rtp_rcv_port = std::atoi(argv[4]);
+  } else {
+    std::cout << "Usage: " << argv[0] << " <directory> <ext> <host> <port>"
+              << std::endl;
+    return 1;
   }
-  const string directory = string(argv[1]) + "/";
-  const string ext = argv[2];
+  constexpr int fps = 10;
+  AVTransmitter transmitter(rtp_rcv_host, rtp_rcv_port, fps);
+
   const string glob_expr = directory + "*." + ext;
   std::cout << "Globbing: " << glob_expr << std::endl;
   vector<string> filenames;
