@@ -53,32 +53,19 @@ void set_codec_params(AVCodecContext *&codec_ctx, double width, double height,
 
 int initialize_codec_stream(AVStream *&stream, AVCodecContext *&codec_ctx,
                             AVCodec *&codec) {
-  int ret = avcodec_parameters_from_context(stream->codecpar, codec_ctx);
-  if (ret < 0) {
-    /* std::cout << "Could not initialize stream codec parameters!" <<
-     * std::endl; */
-    /* exit(1); */
-    return ret;
-  }
-  if (codec_ctx->extradata_size > 0) {
-    std::cout << "Extradata present in AVCodecContext" << std::endl;
-  } else {
-    std::cout << "No Extradata present in AVFormatContext" << std::endl;
-  }
-
-  if (stream->codecpar->extradata_size > 0) {
-    std::cout << "Extradata present in AVStream" << std::endl;
-  } else {
-    std::cout << "No Extradata present in AVStream" << std::endl;
-  }
-
   AVDictionary *codec_options = nullptr;
   av_dict_set(&codec_options, "profile", "high", 0);
   av_dict_set(&codec_options, "preset", "ultrafast", 0);
   av_dict_set(&codec_options, "tune", "zerolatency", 0);
 
   // open video encoder
-  ret = avcodec_open2(codec_ctx, codec, &codec_options);
+  int ret = avcodec_open2(codec_ctx, codec, &codec_options);
+
+  if (codec_ctx->extradata_size > 0) {
+    std::cout << "Extradata present in AVCodecContext" << std::endl;
+  } else {
+    std::cout << "No Extradata present in AVFormatContext" << std::endl;
+  }
 
   bool all_found = true;
   AVDictionaryEntry *e = nullptr;
@@ -90,6 +77,8 @@ int initialize_codec_stream(AVStream *&stream, AVCodecContext *&codec_ctx,
   if (all_found) {
     std::cout << "All codec options found." << std::endl;
   }
+
+  ret = avcodec_parameters_from_context(stream->codecpar, codec_ctx);
   return ret;
 }
 
@@ -134,7 +123,7 @@ int write_frame(AVCodecContext *codec_ctx, AVFormatContext *fmt_ctx,
     return ret;
   }
 
-  av_interleaved_write_frame(fmt_ctx, &pkt);
+  av_write_frame(fmt_ctx, &pkt);
   return ret;
 }
 

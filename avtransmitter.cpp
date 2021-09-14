@@ -1,7 +1,7 @@
 #include "avtransmitter.hpp"
-#include <iostream>
-#include <iomanip>
 #include <chrono>
+#include <iomanip>
+#include <iostream>
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
@@ -34,8 +34,12 @@ AVTransmitter::AVTransmitter(const std::string &host, const unsigned int port,
     throw std::runtime_error("Could not find stream");
   }
   this->out_codec_ctx = avcodec_alloc_context3(this->out_codec);
-  // this cannot be set otherwise h264 packets arent streamable
-  this->out_codec_ctx->flags &= ~AV_CODEC_FLAG_GLOBAL_HEADER;
+
+  // Global header is optional. If present, PPS and SPS h264 info will get
+  // written to AVFormatContext's extradata, and consequently show up in the SDP
+  // file. Howerver the same info seems to be present inside the packet stream
+  // when disabled, making it unnecessary.
+  /* this->out_codec_ctx->flags |=AV_CODEC_FLAG_GLOBAL_HEADER; */
   if (!this->out_codec_ctx) {
     throw std::runtime_error("Could not allocate output codec context");
   }
