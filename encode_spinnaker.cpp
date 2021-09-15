@@ -151,7 +151,7 @@ int main(int argc, char *argv[]) {
     std::cout << "Usage: " << argv[0] << " <serial> <host> <port>" << std::endl;
     return 1;
   }
-  constexpr int fps = 10;
+  constexpr int fps = 20;
   AVTransmitter transmitter(rtp_rcv_host, rtp_rcv_port, fps);
 
   spinnaker_system = Spinnaker::System::GetInstance();

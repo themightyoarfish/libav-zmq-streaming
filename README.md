@@ -39,6 +39,19 @@ On ios, you can also use the VLC app and then follow these steps.
 3. Start the stream on the host with `./build/encode_video_zmq ~/Downloads/images/ jpeg <ios ip> 5006` or similar
 4. The stream should now appear
 
+This streaming process has a delay of at least 1s, which I could not get down, even with
+`--network-caching=0`
+
+## Streaming to `ffplay`
+
+The lowest-latency invocation I have found is
+
+```
+ffplay - -probesize 32 -analyzeduration 0 -fflags nobuffer -fflags discardcorrupt -flags low_delay -sync ext -framedrop -avioflags direct -protocol_whitelist "file,udp,rtp" test.sdp
+```
+
+And that also has 200ms delay.
+
 
 # Dependencies
 Unfortunately this is a bit shitty because there is no cmake support for libav. I pilfered a cmake script for finding ffmpeg from VTK (i think),

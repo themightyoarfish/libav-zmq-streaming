@@ -44,3 +44,10 @@ target_sources(encode_spinnaker_zmq PRIVATE
 target_include_directories(encode_spinnaker_zmq PRIVATE ${LOCAL_INCLUDE_DIRS}
     ${THIRD_PARTY_INCLUDE_DIRS})
 target_link_libraries(encode_spinnaker_zmq ${THIRD_PARTY_LIBRARIES})
+
+add_executable(decode_rtp)
+target_sources(decode_rtp PRIVATE
+    decode_rtp.cpp)
+target_include_directories(encode_spinnaker_zmq PRIVATE ${LOCAL_INCLUDE_DIRS}
+    ${THIRD_PARTY_INCLUDE_DIRS})
+target_link_libraries(decode_rtp ${THIRD_PARTY_LIBRARIES})
