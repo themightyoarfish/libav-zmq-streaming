@@ -15,10 +15,14 @@ AVTransmitter::AVTransmitter(const std::string &host, const unsigned int port,
     : fps_(fps) {
 
   AVOutputFormat *format = av_guess_format("rtp", nullptr, nullptr);
+  if (!format) {
+    throw std::runtime_error("Could not guess output format.");
+  }
   const auto url = std::string("rtp://") + host + ":" + std::to_string(port);
   int success =
       avutils::initialize_avformat_context(this->ofmt_ctx, format, url.c_str());
   /* this->ofmt_ctx->strict_std_compliance = FF_COMPLIANCE_EXPERIMENTAL; */
+  this->ofmt_ctx->flags = AVFMT_FLAG_NOBUFFER | AVFMT_FLAG_FLUSH_PACKETS;
 
   if (success != 0) {
     throw std::runtime_error("Could not allocate output format context! " +
@@ -111,13 +115,13 @@ void AVTransmitter::encode_frame(const cv::Mat &image) {
     std::cerr << "Could not write frame: " << avutils::av_strerror2(success)
               << ". Maybe send more input. " << std::endl;
   } else {
-    /* using namespace std::chrono; */
-    /* std::cout << "Encoded at " << std::setprecision(5) << std::fixed */
-    /*           << duration_cast<milliseconds>( */
-    /*                  system_clock::now().time_since_epoch()) */
-    /*                      .count() / */
-    /*                  1000.0 */
-    /*           << std::endl; */
+    using namespace std::chrono;
+    std::cout << "Encoded at " << std::setprecision(5) << std::fixed
+              << duration_cast<milliseconds>(
+                     system_clock::now().time_since_epoch())
+                         .count() /
+                     1000.0
+              << std::endl;
     this->frame_ended();
   }
 }
