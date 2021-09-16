@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
               << std::endl;
     return 1;
   }
-  constexpr int fps = 100;
+  constexpr int fps = 19;
   constexpr int budget_ms = 1000.0 / fps;
   AVTransmitter transmitter(rtp_rcv_host, rtp_rcv_port, fps);
 
@@ -84,7 +84,7 @@ int main(int argc, char *argv[]) {
     images.emplace_back(cv::imread(filenames[i]));
   }
 
-  constexpr bool put_text = false;
+  constexpr bool put_text = true;
   constexpr bool print_timings = false;
 
   int ms = 0;
@@ -94,18 +94,15 @@ int main(int argc, char *argv[]) {
     auto desired_end_time = begin + milliseconds(budget_ms * (i + 1));
     cv::Mat &image = images[i];
     if (put_text) {
-      /* auto stamp = format_timepoint_iso8601(tic); */
-      /* cv::putText(image, stamp, cv::Point(10, 20), cv::FONT_HERSHEY_SIMPLEX,
-       * 1,
-       */
-      /*             cv::Scalar(0, 0, 255), 2); */
-      /* std::cout << "Begin encode at " << std::setprecision(5) << std::fixed
-       */
-      /*           << duration_cast<milliseconds>( */
-      /*                  system_clock::now().time_since_epoch()) */
-      /*                      .count() / */
-      /*                  1000.0 */
-      /*           << std::endl; */
+      auto stamp = format_timepoint_iso8601(tic);
+      cv::putText(image, stamp, cv::Point(10, 20), cv::FONT_HERSHEY_SIMPLEX, 1,
+                  cv::Scalar(0, 0, 255), 2);
+      std::cout << "Begin encode at " << std::setprecision(5) << std::fixed
+                << duration_cast<milliseconds>(
+                       system_clock::now().time_since_epoch())
+                           .count() /
+                       1000.0
+                << std::endl;
     }
     transmitter.encode_frame(image);
     const auto toc = chrono::system_clock::now();

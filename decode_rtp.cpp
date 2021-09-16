@@ -56,12 +56,14 @@ int main(int argc, char **argv) {
   dec_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
   dec_ctx->framerate = dst_fps;
   dec_ctx->time_base = av_inv_q(dst_fps);
+  dec_ctx->delay = 0;
+  /* dec_ctx->thread_count = 1; */
+  /* dec_ctx->thread_type = FF_THREAD_SLICE; */
 
   if (avcodec_open2(dec_ctx, codec, nullptr) < 0) {
     std::cout << "Could not open context" << std::endl;
     exit(1);
   }
-  dec_ctx->thread_count = 1;
   AVFrame *frame = av_frame_alloc();
   while (av_read_frame(fmt_ctx, &packet) >= 0) {
     int success = avcodec_send_packet(dec_ctx, &packet);
@@ -78,9 +80,9 @@ int main(int argc, char **argv) {
                            .count() /
                        1000.0
                 << std::endl;
-      /* cv::Mat image = avutils::avframeYUV402p2Mat(frame); */
-      /* cv::imshow("decoded", image); */
-      /* cv::waitKey(2); */
+      cv::Mat image = avutils::avframeYUV402p2Mat(frame);
+      cv::imshow("decoded", image);
+      cv::waitKey(2);
     } else {
       std::cout << "Did not get frame " << avutils::av_strerror2(success)
                 << std::endl;

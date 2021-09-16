@@ -49,6 +49,8 @@ void set_codec_params(AVCodecContext *&codec_ctx, double width, double height,
   codec_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
   codec_ctx->framerate = dst_fps;
   codec_ctx->time_base = av_inv_q(dst_fps);
+  /* codec_ctx->thread_type = FF_THREAD_SLICE; */
+  /* codec_ctx->thread_count = 1; */
 }
 
 int initialize_codec_stream(AVStream *&stream, AVCodecContext *&codec_ctx,
@@ -57,6 +59,7 @@ int initialize_codec_stream(AVStream *&stream, AVCodecContext *&codec_ctx,
   av_dict_set(&codec_options, "profile", "high", 0);
   av_dict_set(&codec_options, "preset", "ultrafast", 0);
   av_dict_set(&codec_options, "tune", "zerolatency", 0);
+  av_dict_set_int(&codec_options, "aud", 1, 0);
 
   // open video encoder
   int ret = avcodec_open2(codec_ctx, codec, &codec_options);
@@ -124,6 +127,7 @@ int write_frame(AVCodecContext *codec_ctx, AVFormatContext *fmt_ctx,
   }
 
   av_write_frame(fmt_ctx, &pkt);
+
   return ret;
 }
 
