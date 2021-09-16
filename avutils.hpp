@@ -21,9 +21,8 @@ int initialize_avformat_context(AVFormatContext *&fctx,
                                 AVOutputFormat *format = nullptr,
                                 const char *out_file = nullptr);
 
-void set_codec_params(AVCodecContext *&codec_ctx,
-                      double width, double height, int fps,
-                      int target_bitrate = 0, int gop_size = 12);
+void set_codec_params(AVCodecContext *&codec_ctx, double width, double height,
+                      int fps, int target_bitrate = 0, int gop_size = 12);
 
 int initialize_codec_stream(AVStream *&stream, AVCodecContext *&codec_ctx,
                             AVCodec *&codec);

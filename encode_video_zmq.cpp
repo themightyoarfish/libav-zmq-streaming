@@ -48,7 +48,8 @@ std::string format_timepoint_iso8601(const system_clock::time_point &t,
 using namespace std;
 
 int main(int argc, char *argv[]) {
-  /* av_log_set_level(AV_LOG_DEBUG); */
+  /* av_log_set_level(AV_LOG_TRACE); */
+
   std::cout << "Libav version: " << av_version_info() << std::endl;
 
   std::string directory;
@@ -66,7 +67,8 @@ int main(int argc, char *argv[]) {
               << std::endl;
     return 1;
   }
-  constexpr int fps = 10;
+  constexpr int fps = 100;
+  constexpr int budget_ms = 1000.0 / fps;
   AVTransmitter transmitter(rtp_rcv_host, rtp_rcv_port, fps);
 
   const string glob_expr = directory + "*." + ext;
@@ -75,27 +77,60 @@ int main(int argc, char *argv[]) {
   cv::glob(glob_expr, filenames);
   std::cout << "Found " << filenames.size() << " images" << std::endl;
   sort(filenames.begin(), filenames.end());
+  const int n_frames = 200; // filenames.size();
 
-  const int n_frames = filenames.size();
-  int ms = 0;
+  vector<cv::Mat> images;
   for (int i = 0; i < n_frames; ++i) {
+    images.emplace_back(cv::imread(filenames[i]));
+  }
 
-    cv::Mat image = cv::imread(filenames[i]);
+  constexpr bool put_text = false;
+  constexpr bool print_timings = false;
+
+  int ms = 0;
+  const auto begin = chrono::system_clock::now();
+  for (int i = 0; i < n_frames; ++i) {
     auto tic = chrono::system_clock::now();
-    auto stamp = format_timepoint_iso8601(tic);
-    cv::putText(image, stamp, cv::Point(10, 20), cv::FONT_HERSHEY_SIMPLEX, 1,
-                cv::Scalar(0, 0, 255), 2);
-    std::cout << "Begin encode at " << std::setprecision(5) << std::fixed
-              << duration_cast<milliseconds>(
-                     system_clock::now().time_since_epoch())
-                         .count() /
-                     1000.0
-              << std::endl;
+    auto desired_end_time = begin + milliseconds(budget_ms * (i + 1));
+    cv::Mat &image = images[i];
+    if (put_text) {
+      /* auto stamp = format_timepoint_iso8601(tic); */
+      /* cv::putText(image, stamp, cv::Point(10, 20), cv::FONT_HERSHEY_SIMPLEX,
+       * 1,
+       */
+      /*             cv::Scalar(0, 0, 255), 2); */
+      /* std::cout << "Begin encode at " << std::setprecision(5) << std::fixed
+       */
+      /*           << duration_cast<milliseconds>( */
+      /*                  system_clock::now().time_since_epoch()) */
+      /*                      .count() / */
+      /*                  1000.0 */
+      /*           << std::endl; */
+    }
     transmitter.encode_frame(image);
-    auto toc = chrono::system_clock::now();
-    ms += chrono::duration_cast<chrono::milliseconds>(toc - tic).count();
-    /* cout << "fps = " << 1 / ((ms / 1000.0) / (i + 1)) << endl; */
-    std::this_thread::sleep_for(milliseconds(static_cast<int>(1000.0 / fps)));
+    const auto toc = chrono::system_clock::now();
+
+    const auto remaining = desired_end_time - toc;
+    const auto elapsed_encoding =
+        chrono::duration_cast<chrono::milliseconds>(toc - tic).count();
+    if (remaining.count() > 0) {
+      int sleep = duration_cast<milliseconds>(remaining).count();
+      if (print_timings) {
+        std::cout << "Elapsed for encoding " << elapsed_encoding << std::endl;
+        std::cout << "Sleep for " << sleep << std::endl;
+      }
+      std::this_thread::sleep_for(milliseconds(sleep));
+    }
+    const auto toc2 = chrono::system_clock::now();
+    const auto actually_slept =
+        chrono::duration_cast<chrono::milliseconds>(toc2 - toc).count();
+    if (print_timings) {
+      std::cout << "actually slept " << actually_slept << std::endl;
+      const auto elapsed_total =
+          chrono::duration_cast<chrono::milliseconds>(toc2 - tic).count();
+      ms += elapsed_total;
+      cout << "fps = " << (i + 1) * 1000.0 / ms << endl;
+    }
   }
   return 0;
 }
