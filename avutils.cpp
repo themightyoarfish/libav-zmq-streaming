@@ -134,4 +134,34 @@ void generatePattern(cv::Mat &image, unsigned char i) {
   image.row(perc_height * image.rows).setTo(cv::Scalar(0, 0, 0));
   image.col(perc_width * image.cols).setTo(cv::Scalar(0, 0, 0));
 }
+
+cv::Mat avframeYUV402p2Mat(const AVFrame *frame) {
+  std::vector<int> sizes = {frame->height, frame->width};
+  std::vector<size_t> steps{static_cast<size_t>(frame->linesize[0])};
+
+  const auto height = frame->height;
+  const auto width = frame->width;
+  const auto actual_size = cv::Size(width, height);
+  void *y = frame->data[0];
+  void *u = frame->data[1];
+  void *v = frame->data[2];
+
+  cv::Mat y_mat(height, width, CV_8UC1, y, frame->linesize[0]);
+  cv::Mat u_mat(height / 2, width / 2, CV_8UC1, u, frame->linesize[1]);
+  cv::Mat v_mat(height / 2, width / 2, CV_8UC1, v, frame->linesize[2]);
+  cv::Mat u_resized, v_resized;
+  cv::resize(u_mat, u_resized, actual_size, 0, 0,
+             cv::INTER_NEAREST); // repeat u values 4 times
+  cv::resize(v_mat, v_resized, actual_size, 0, 0,
+             cv::INTER_NEAREST); // repeat v values 4 times
+
+  cv::Mat yuv;
+
+  std::vector<cv::Mat> yuv_channels = {y_mat, u_resized, v_resized};
+  cv::merge(yuv_channels, yuv);
+
+  cv::Mat image;
+  cv::cvtColor(yuv, image, cv::COLOR_YUV2BGR);
+  return image;
+}
 } // namespace avutils

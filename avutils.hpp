@@ -38,5 +38,7 @@ int write_frame(AVCodecContext *codec_ctx, AVFormatContext *fmt_ctx,
                 AVFrame *frame);
 
 void generatePattern(cv::Mat &image, unsigned char i);
+
+cv::Mat avframeYUV402p2Mat(const AVFrame *frame);
 } // namespace avutils
 #endif
