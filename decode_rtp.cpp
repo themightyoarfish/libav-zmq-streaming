@@ -24,7 +24,8 @@ int main(int argc, char **argv) {
   av_opt_set_int(fmt_ctx, "fpsprobesize", 0, 0);
   av_opt_set_int(fmt_ctx, "probesize", 32, 0);
   av_opt_set_int(fmt_ctx, "analyzeduration", 0, 0);
-  fmt_ctx->max_delay = 0;
+  // do not use over lossy network, fucks it up
+  /* fmt_ctx->max_delay = 0; */
 
   auto src_filename = "test.sdp";
   /* open input file, and allocate format context */
