@@ -39,7 +39,7 @@ On ios, you can also use the VLC app and then follow these steps.
 3. Start the stream on the host with `./build/encode_video_zmq ~/Downloads/images/ jpeg <ios ip> 5006` or similar
 4. The stream should now appear
 
-This streaming process has a delay of at least 1s, which I could not get down, even with
+This streaming process has a delay of at least 0.5s, which I could not get down, even with
 `--network-caching=0`
 
 ## Streaming to `ffplay`
@@ -78,3 +78,23 @@ this->ofmt_ctx->strict_std_compliance = FF_COMPLIANCE_EXPERIMENTAL;
 
 However, VLC does not seem to support that so the point is moot, unless you can use
 ffplay or write your own receiver with libavcodec.
+
+# Performance
+
+When sender and receiver run on the same host, no streaming delay is observed, save for
+the time it takes to encode and decode. There is not a single frame of delay, so the
+method can be considered to be optimal on a lossless link.
+
+Over a VPN connection via Azure to the same country (germany), performance is still very
+good, the loss is low enough that only rarely a frame is missed.
+
+Over a VPN connection via Azure US and a much more delayed and lossly link, this is
+unuseable, as over UDP seemingly too few packets get lost to even decode a single frame
+in time. We would need to try TCP for this, which `libavcodec` does not support for RTP.
+RTSP would have to be investigated.
+
+Previously, I was sending plain h264 packets over Zmq, which can use TCP. Performance
+for this was tolerable for high resolution images, with some artifacts and jankiness,
+but might be improved with smaller image size. Special consideration must be taken with
+setting `conflate`, `sendhwm` and `recvhwm` options in senders/receivers to avoid
+unintentional buffering and delays.
