@@ -1,7 +1,6 @@
 #include "avutils.hpp"
 #include <chrono>
 #include <iomanip>
-#include <opencv2/highgui.hpp>
 #include <iostream>
 
 extern "C" {
@@ -81,9 +80,9 @@ int main(int argc, char **argv) {
                            .count() /
                        1000.0
                 << std::endl;
-      cv::Mat image = avutils::avframeYUV402p2Mat(frame);
-      cv::imshow("decoded", image);
-      cv::waitKey(2);
+      /* cv::Mat image = avutils::avframeYUV402p2Mat(frame); */
+      /* cv::imshow("decoded", image); */
+      /* cv::waitKey(2); */
     } else {
       std::cout << "Did not get frame " << avutils::av_strerror2(success)
                 << std::endl;
