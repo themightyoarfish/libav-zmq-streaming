@@ -137,17 +137,16 @@ AVTransmitter::~AVTransmitter() {
 void AVTransmitter::frame_ended() {
   // Send an h264 AUD, which tells the receiving end that a frame has ended.
   // seeting the aud option to x264 does not seem to do this, so we do it
-  // manually found this here https://stackoverflow.com/a/60469996/2397253, but
-  // i dont know why they are sending 16 as the 6th byte, AUD is simply 0 0 0 1
-  // 9
+  // manually found this here https://stackoverflow.com/a/60469996/2397253, but i dont
+  // know why they are sending 16 as the 6th byte, AUD is simply 0 0 0 1 9
   // TODO: remove if h264 is not used
   AVPacket pkt2 = {0};
   // not sure if just using the last frame's pts or and dts like this is wise
   pkt2.dts = frame_->pts;
   pkt2.pts = frame_->pts;
   pkt2.data = static_cast<std::uint8_t *>(av_mallocz(5));
-  pkt2.data[4] = 9; // code for AUD
-  pkt2.data[3] = 1; // NAL starts with 0 0 0 1
+  pkt2.data[4] = 9;  // code for AUD
+  pkt2.data[3] = 1;  // NAL starts with 0 0 0 1
   pkt2.size = 5;
   int success = av_write_frame(this->ofmt_ctx, &pkt2);
   if (success != 0) {
