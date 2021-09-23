@@ -21,15 +21,15 @@ set(THIRD_PARTY_INCLUDE_DIRS ${OpenCV_INCLUDE_DIRS} ${cppzmq_INCLUDE_DIRS}
 set(THIRD_PARTY_LIBRARIES ${OpenCV_LIBRARIES} ${cppzmq_LIBRARIES}
     ${FFMPEG_LIBRARIES} ${Spinnaker_LIBRARIES} ${CMAKE_DL_LIBS})
 set(COMMON_SRC ${CMAKE_CURRENT_LIST_DIR}/avutils.cpp)
-set(ENCODER_SRC ${CMAKE_CURRENT_LIST_DIR}/encode_video_zmq.cpp
+set(ENCODER_SRC ${CMAKE_CURRENT_LIST_DIR}/encode_video_fromdir.cpp
     ${CMAKE_CURRENT_LIST_DIR}/avtransmitter.cpp ${COMMON_SRC})
 set(DECODER_SRC ${CMAKE_CURRENT_LIST_DIR}/decode_video_zmq.cpp
     ${CMAKE_CURRENT_LIST_DIR}/avreceiver.cpp)
-add_executable(encode_video_zmq)
-target_sources(encode_video_zmq PRIVATE ${ENCODER_SRC} ${COMMON_SRC})
-target_include_directories(encode_video_zmq PRIVATE ${LOCAL_INCLUDE_DIRS}
+add_executable(encode_video_fromdir)
+target_sources(encode_video_fromdir PRIVATE ${ENCODER_SRC} ${COMMON_SRC})
+target_include_directories(encode_video_fromdir PRIVATE ${LOCAL_INCLUDE_DIRS}
     ${THIRD_PARTY_INCLUDE_DIRS})
-target_link_libraries(encode_video_zmq ${THIRD_PARTY_LIBRARIES})
+target_link_libraries(encode_video_fromdir ${THIRD_PARTY_LIBRARIES})
 
 add_executable(decode_video_zmq)
 target_sources(decode_video_zmq PRIVATE ${DECODER_SRC} ${COMMON_SRC})
@@ -37,17 +37,15 @@ target_include_directories(decode_video_zmq PRIVATE ${LOCAL_INCLUDE_DIRS}
     ${THIRD_PARTY_INCLUDE_DIRS})
 target_link_libraries(decode_video_zmq ${THIRD_PARTY_LIBRARIES})
 
-add_executable(encode_spinnaker_zmq)
-target_sources(encode_spinnaker_zmq PRIVATE
+add_executable(encode_spinnaker)
+target_sources(encode_spinnaker PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}/encode_spinnaker.cpp
     ${CMAKE_CURRENT_LIST_DIR}/avtransmitter.cpp ${COMMON_SRC})
-target_include_directories(encode_spinnaker_zmq PRIVATE ${LOCAL_INCLUDE_DIRS}
+target_include_directories(encode_spinnaker PRIVATE ${LOCAL_INCLUDE_DIRS}
     ${THIRD_PARTY_INCLUDE_DIRS})
-target_link_libraries(encode_spinnaker_zmq ${THIRD_PARTY_LIBRARIES})
+target_link_libraries(encode_spinnaker ${THIRD_PARTY_LIBRARIES})
 
 add_executable(decode_rtp)
 target_sources(decode_rtp PRIVATE
     decode_rtp.cpp ${COMMON_SRC})
-target_include_directories(encode_spinnaker_zmq PRIVATE ${LOCAL_INCLUDE_DIRS}
-    ${THIRD_PARTY_INCLUDE_DIRS})
 target_link_libraries(decode_rtp ${THIRD_PARTY_LIBRARIES})
