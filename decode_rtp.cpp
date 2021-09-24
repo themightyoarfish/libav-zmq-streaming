@@ -29,6 +29,10 @@ private:
   std::atomic<bool> pause;
   std::thread runner;
 
+  static int should_interrupt(void *opaque) {
+    return opaque != nullptr && static_cast<RTPReceiver *>(opaque)->stop.load();
+  }
+
 public:
   RTPReceiver(const std::string &sdp_path = "test.sdp") {
     stop.store(false);
@@ -43,6 +47,9 @@ public:
     av_opt_set_int(fmt_ctx, "analyzeduration", 0, 0);
     // do not use over lossy network, fucks it up
     /* fmt_ctx->max_delay = 0; */
+
+    fmt_ctx->interrupt_callback.opaque = (void *)this;
+    fmt_ctx->interrupt_callback.callback = &RTPReceiver::should_interrupt;
 
     /* open input file, and allocate format context */
     if (avformat_open_input(&fmt_ctx, sdp_path.c_str(), NULL, NULL) < 0) {
@@ -99,6 +106,7 @@ public:
                       << std::endl;
           }
         }
+        std::cout << "Exited recv loop loop" << std::endl;
       }
     });
   }
@@ -123,5 +131,5 @@ int main(int argc, char **argv) {
   RTPReceiver receiver;
   std::this_thread::sleep_until(
       std::chrono::system_clock::now() +
-      std::chrono::hours(std::numeric_limits<int>::max()));
+      std::chrono::seconds(20000000));
 }
