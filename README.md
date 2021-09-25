@@ -6,14 +6,13 @@ I have since enabled RTP transport, so the stream can be played with ffplay and 
 
 ## Binaries
 
-`encode_video_zmq` is no longer aptly named, as it does not use zmq. Instead it reads
-images from a directory and sends it to an rtp host and port. An SDP file is written and
+`encode_video_fromdir` reads images from a directory and sends it to an rtp host and port. An SDP file is written and
 needs to be used by the client (does not change unless you change parameters).
 
 Usage is
 
 ```
-./build/encode_video_zmq ~/Downloads/images/ jpeg 127.0.0.1 5006
+./build/encode_video_fromdir ~/Downloads/images/ jpeg 127.0.0.1 5006
 ```
 
 Beware that **an even-numbered RTP port** is necessary otherwise VLC will not receive
