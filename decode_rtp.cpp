@@ -58,7 +58,7 @@ public:
 
     current_packet = new AVPacket;
     av_init_packet(current_packet);
-    codec = avcodec_find_decoder(AV_CODEC_ID_H264);
+    codec = avcodec_find_decoder(AV_CODEC_ID_VP9);
     if (!codec) {
       throw std::invalid_argument("Could not find decoder");
     }
@@ -67,7 +67,7 @@ public:
 
     // does nothing, unfortunately
     dec_ctx->thread_count = 1;
-    dec_ctx->codec_id = AV_CODEC_ID_H264;
+    dec_ctx->codec_id = AV_CODEC_ID_VP9;
     dec_ctx->codec_type = AVMEDIA_TYPE_VIDEO;
     dec_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
     dec_ctx->delay = 0;
@@ -129,7 +129,6 @@ public:
 
 int main(int argc, char **argv) {
   RTPReceiver receiver;
-  std::this_thread::sleep_until(
-      std::chrono::system_clock::now() +
-      std::chrono::seconds(20000000));
+  std::this_thread::sleep_until(std::chrono::system_clock::now() +
+                                std::chrono::seconds(20000000));
 }

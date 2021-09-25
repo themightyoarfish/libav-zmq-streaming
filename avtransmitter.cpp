@@ -21,7 +21,7 @@ AVTransmitter::AVTransmitter(const std::string &host, const unsigned int port,
   const auto url = std::string("rtp://") + host + ":" + std::to_string(port);
   int success =
       avutils::initialize_avformat_context(this->ofmt_ctx, format, url.c_str());
-  /* this->ofmt_ctx->strict_std_compliance = FF_COMPLIANCE_EXPERIMENTAL; */
+  this->ofmt_ctx->strict_std_compliance = FF_COMPLIANCE_EXPERIMENTAL;
   this->ofmt_ctx->flags = AVFMT_FLAG_NOBUFFER | AVFMT_FLAG_FLUSH_PACKETS;
 
   if (success != 0) {
@@ -29,7 +29,7 @@ AVTransmitter::AVTransmitter(const std::string &host, const unsigned int port,
                              avutils::av_strerror2(success));
   }
 
-  this->out_codec = avcodec_find_encoder(AV_CODEC_ID_H264);
+  this->out_codec = avcodec_find_encoder(AV_CODEC_ID_VP9);
   if (!this->out_codec) {
     throw std::runtime_error("Could not find encoder");
   }
@@ -140,16 +140,16 @@ void AVTransmitter::frame_ended() {
   // manually found this here https://stackoverflow.com/a/60469996/2397253, but i dont
   // know why they are sending 16 as the 6th byte, AUD is simply 0 0 0 1 9
   // TODO: remove if h264 is not used
-  AVPacket pkt2 = {0};
-  // not sure if just using the last frame's pts or and dts like this is wise
-  pkt2.dts = frame_->pts;
-  pkt2.pts = frame_->pts;
-  pkt2.data = static_cast<std::uint8_t *>(av_mallocz(5));
-  pkt2.data[4] = 9;  // code for AUD
-  pkt2.data[3] = 1;  // NAL starts with 0 0 0 1
-  pkt2.size = 5;
-  int success = av_write_frame(this->ofmt_ctx, &pkt2);
-  if (success != 0) {
-    std::cout << "Could not write AUD" << std::endl;
-  }
+  /* AVPacket pkt2 = {0}; */
+  /* // not sure if just using the last frame's pts or and dts like this is wise */
+  /* pkt2.dts = frame_->pts; */
+  /* pkt2.pts = frame_->pts; */
+  /* pkt2.data = static_cast<std::uint8_t *>(av_mallocz(5)); */
+  /* pkt2.data[4] = 9;  // code for AUD */
+  /* pkt2.data[3] = 1;  // NAL starts with 0 0 0 1 */
+  /* pkt2.size = 5; */
+  /* int success = av_write_frame(this->ofmt_ctx, &pkt2); */
+  /* if (success != 0) { */
+  /*   std::cout << "Could not write AUD" << std::endl; */
+  /* } */
 }
