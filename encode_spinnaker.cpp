@@ -231,9 +231,19 @@ int main(int argc, char *argv[]) {
                     CV_8UC3, currentFrame->GetData(),
                     currentFrame->GetStride());
 
-      /* std::cout << "Sending image" << std::endl; */
+      std::cout << "Begin encode " << std::setprecision(5) << std::fixed
+                << duration_cast<milliseconds>(
+                       system_clock::now().time_since_epoch())
+                           .count() /
+                       1000.0
+                << std::endl;
       transmitter.encode_frame(image);
-      /* std::cout << "Sent image" << std::endl; */
+      std::cout << "Encoded at " << std::setprecision(5) << std::fixed
+                << duration_cast<milliseconds>(
+                       system_clock::now().time_since_epoch())
+                           .count() /
+                       1000.0
+                << std::endl;
       currentFrame = nullptr;
     }
   }

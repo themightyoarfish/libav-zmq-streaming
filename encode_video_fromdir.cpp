@@ -1,8 +1,8 @@
-#include <fstream>
 #include "avreceiver.hpp"
 #include "avtransmitter.hpp"
 #include "avutils.hpp"
 #include <chrono>
+#include <fstream>
 #include <iostream>
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
@@ -107,6 +107,12 @@ int main(int argc, char *argv[]) {
                 << std::endl;
     }
     transmitter.encode_frame(image);
+    std::cout << "Encoded at " << std::setprecision(5) << std::fixed
+              << duration_cast<milliseconds>(
+                     system_clock::now().time_since_epoch())
+                         .count() /
+                     1000.0
+              << std::endl;
     if (!has_sdp) {
       has_sdp = true;
       std::ofstream ofs("test.sdp");

@@ -113,13 +113,6 @@ void AVTransmitter::encode_frame(const cv::Mat &image) {
     std::cerr << "Could not write frame: " << avutils::av_strerror2(success)
               << ". Maybe send more input. " << std::endl;
   } else {
-    using namespace std::chrono;
-    std::cout << "Encoded at " << std::setprecision(5) << std::fixed
-              << duration_cast<milliseconds>(
-                     system_clock::now().time_since_epoch())
-                         .count() /
-                     1000.0
-              << std::endl;
     this->frame_ended();
   }
 }
