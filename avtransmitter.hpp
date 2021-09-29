@@ -18,6 +18,7 @@ class AVTransmitter {
   unsigned int width_;
   unsigned int fps_;
   AVFrame *frame_ = nullptr;
+  std::string sdp_;
 
 public:
   AVTransmitter(const std::string &host, const unsigned int port,
@@ -28,6 +29,8 @@ public:
   ~AVTransmitter();
 
   void frame_ended();
+
+  std::string get_sdp() const;
 };
 
 #endif /* end of include guard: AVTRANSMITTER_HPP_A9X5A3XE */

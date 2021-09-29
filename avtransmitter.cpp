@@ -12,7 +12,7 @@ extern "C" {
 
 AVTransmitter::AVTransmitter(const std::string &host, const unsigned int port,
                              unsigned int fps)
-    : fps_(fps) {
+    : fps_(fps), sdp_("") {
 
   AVOutputFormat *format = av_guess_format("rtp", nullptr, nullptr);
   if (!format) {
@@ -64,13 +64,11 @@ void AVTransmitter::encode_frame(const cv::Mat &image) {
     avio_open(&(this->ofmt_ctx->pb), this->ofmt_ctx->filename, AVIO_FLAG_WRITE);
 
     /* Write a file for VLC */
-    char buf[200000];
+    constexpr int buflen = 1024;
+    char buf[buflen] = {0};
     AVFormatContext *ac[] = {this->ofmt_ctx};
-    av_sdp_create(ac, 1, buf, 20000);
-    printf("sdp:\n%s\n", buf);
-    FILE *fsdp = fopen("test.sdp", "w");
-    fprintf(fsdp, "%s", buf);
-    fclose(fsdp);
+    av_sdp_create(ac, 1, buf, buflen);
+    this->sdp_ = std::string(buf);
 
     if (success != 0) {
       throw std::invalid_argument("Could not initialize codec stream " +
@@ -153,3 +151,6 @@ void AVTransmitter::frame_ended() {
     std::cout << "Could not write AUD" << std::endl;
   }
 }
+  std::string AVTransmitter::get_sdp() const {
+      return this->sdp_;
+  }
