@@ -19,10 +19,12 @@ class AVTransmitter {
   unsigned int fps_;
   AVFrame *frame_ = nullptr;
   std::string sdp_;
+  unsigned int gop_size_;
+  unsigned int target_bitrate_;
 
 public:
   AVTransmitter(const std::string &host, const unsigned int port,
-                unsigned int fps);
+                unsigned int fps, unsigned int gop_size = 10, unsigned int target_bitrate = 4e6);
 
   void encode_frame(const cv::Mat &image);
 

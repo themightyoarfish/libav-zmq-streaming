@@ -17,6 +17,7 @@
 
 using std::string;
 using namespace Spinnaker::GenApi;
+using namespace std::chrono;
 
 static Spinnaker::SystemPtr spinnaker_system = nullptr;
 static Spinnaker::CameraPtr camera = nullptr;

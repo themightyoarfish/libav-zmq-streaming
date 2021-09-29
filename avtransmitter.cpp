@@ -11,8 +11,8 @@ extern "C" {
 }
 
 AVTransmitter::AVTransmitter(const std::string &host, const unsigned int port,
-                             unsigned int fps)
-    : fps_(fps), sdp_("") {
+                             unsigned int fps, unsigned int gop_size, unsigned int target_bitrate )
+    : fps_(fps), sdp_(""), gop_size_(gop_size), target_bitrate_(target_bitrate) {
 
   AVOutputFormat *format = av_guess_format("rtp", nullptr, nullptr);
   if (!format) {
@@ -55,8 +55,8 @@ void AVTransmitter::encode_frame(const cv::Mat &image) {
     first_time = false;
     height_ = image.rows;
     width_ = image.cols;
-    avutils::set_codec_params(this->out_codec_ctx, width_, height_, fps_, 2e6,
-                              6);
+    avutils::set_codec_params(this->out_codec_ctx, width_, height_, fps_, target_bitrate_,
+                              gop_size_);
     int success = avutils::initialize_codec_stream(this->out_stream,
                                                    out_codec_ctx, out_codec);
     this->out_stream->time_base.num = 1;

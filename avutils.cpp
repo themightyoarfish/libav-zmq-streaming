@@ -39,8 +39,6 @@ void set_codec_params(AVCodecContext *&codec_ctx, double width, double height,
   if (target_bitrate > 0) {
     codec_ctx->bit_rate = target_bitrate;
   }
-  // does nothing, unfortunately
-  codec_ctx->thread_count = 1;
   codec_ctx->codec_id = AV_CODEC_ID_H264;
   codec_ctx->codec_type = AVMEDIA_TYPE_VIDEO;
   codec_ctx->width = width;
@@ -50,7 +48,6 @@ void set_codec_params(AVCodecContext *&codec_ctx, double width, double height,
   codec_ctx->framerate = dst_fps;
   codec_ctx->time_base = av_inv_q(dst_fps);
   /* codec_ctx->thread_type = FF_THREAD_SLICE; */
-  /* codec_ctx->thread_count = 1; */
 }
 
 int initialize_codec_stream(AVStream *&stream, AVCodecContext *&codec_ctx,

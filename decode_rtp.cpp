@@ -1,4 +1,5 @@
 #include "avutils.hpp"
+#include <mutex>
 #include <atomic>
 #include <chrono>
 #include <iomanip>
@@ -27,6 +28,8 @@ private:
 
   std::atomic<bool> stop;
   std::atomic<bool> pause;
+  std::mutex mtx;
+  cv::Mat out;
   std::thread runner;
 
   static int should_interrupt(void *opaque) {
@@ -34,6 +37,10 @@ private:
   }
 
 public:
+  cv::Mat get() {
+    std::lock_guard<std::mutex> lock(mtx);
+    return out;
+  }
   RTPReceiver(const std::string &sdp_path = "test.sdp") {
     stop.store(false);
 
@@ -96,7 +103,8 @@ public:
                                  .count() /
                              1000.0
                       << std::endl;
-            /* cv::Mat image = avutils::avframeYUV402p2Mat(current_frame); */
+            std::lock_guard<std::mutex> lock(mtx);
+            out = avutils::avframeYUV402p2Mat(current_frame);
             /* cv::imshow("decoded", image); */
             /* cv::waitKey(2); */
 
@@ -129,7 +137,11 @@ public:
 
 int main(int argc, char **argv) {
   RTPReceiver receiver;
-  std::this_thread::sleep_until(
-      std::chrono::system_clock::now() +
-      std::chrono::seconds(20000000));
+  while (true) {
+    cv::Mat image = receiver.get();
+    if (!image.empty()) {
+      cv::imshow("", image);
+      cv::waitKey(2);
+    }
+  }
 }
