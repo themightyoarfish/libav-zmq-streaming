@@ -1,7 +1,6 @@
 #include "avutils.hpp"
 
 #include <chrono>
-#include <iostream>
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgcodecs.hpp>
@@ -62,20 +61,20 @@ int initialize_codec_stream(AVStream *&stream, AVCodecContext *&codec_ctx,
   int ret = avcodec_open2(codec_ctx, codec, &codec_options);
 
   if (codec_ctx->extradata_size > 0) {
-    std::cout << "Extradata present in AVCodecContext" << std::endl;
+    /* std::cout << "Extradata present in AVCodecContext" << std::endl; */
   } else {
-    std::cout << "No Extradata present in AVFormatContext" << std::endl;
+    /* std::cout << "No Extradata present in AVFormatContext" << std::endl; */
   }
 
   bool all_found = true;
   AVDictionaryEntry *e = nullptr;
   while (e = av_dict_get(codec_options, "", e, AV_DICT_IGNORE_SUFFIX)) {
-    std::cout << "Did not find option " << e->key << ": " << e->value
-              << std::endl;
+    /* std::cout << "Did not find option " << e->key << ": " << e->value */
+    /*           << std::endl; */
     all_found = false;
   }
   if (all_found) {
-    std::cout << "All codec options found." << std::endl;
+    /* std::cout << "All codec options found." << std::endl; */
   }
 
   ret = avcodec_parameters_from_context(stream->codecpar, codec_ctx);
@@ -113,13 +112,13 @@ int write_frame(AVCodecContext *codec_ctx, AVFormatContext *fmt_ctx,
 
   int ret = avcodec_send_frame(codec_ctx, frame);
   if (ret < 0) {
-    std::cout << "Error sending frame to codec context!" << std::endl;
+    /* std::cout << "Error sending frame to codec context!" << std::endl; */
     return ret;
   }
 
   ret = avcodec_receive_packet(codec_ctx, &pkt);
   if (ret < 0) {
-    std::cout << "Error receiving packet from codec context!" << std::endl;
+    /* std::cout << "Error receiving packet from codec context!" << std::endl; */
     return ret;
   }
 
