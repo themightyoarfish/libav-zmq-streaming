@@ -12,7 +12,6 @@ The following components are supported:
   * `avdevice`
   * `avfilter`
   * `avformat`
-  * `avresample`
   * `avutil`
   * `swresample`
   * `swscale`
@@ -30,6 +29,7 @@ are guaranteed to set these variables or provide targets.
 #]==]
 
 function (_ffmpeg_find component headername)
+  message(STATUS "Finding lib${component}/${headername}")
   find_path("FFMPEG_${component}_INCLUDE_DIR"
     NAMES
       "lib${component}/${headername}"
@@ -48,6 +48,7 @@ function (_ffmpeg_find component headername)
       ffmpeg
     DOC "FFMPEG's ${component} include directory")
   mark_as_advanced("FFMPEG_${component}_INCLUDE_DIR")
+  message(STATUS "Found lib${component}/${headername} in ${FFMPEG_${component}_INCLUDE_DIR}")
 
   # On Windows, static FFMPEG is sometimes built as `lib<name>.a`.
   if (WIN32)
@@ -74,6 +75,7 @@ function (_ffmpeg_find component headername)
       "${FFMPEG_ROOT}/bin"
     DOC "FFMPEG's ${component} library")
   mark_as_advanced("FFMPEG_${component}_LIBRARY")
+  message(STATUS "Found ${FFMPEG_${component}_LIBRARY}")
 
   if (FFMPEG_${component}_LIBRARY AND FFMPEG_${component}_INCLUDE_DIR)
     set(_deps_found TRUE)
@@ -133,8 +135,6 @@ function (_ffmpeg_find component headername)
 endfunction ()
 
 _ffmpeg_find(avutil     avutil.h)
-_ffmpeg_find(avresample avresample.h
-  avutil)
 _ffmpeg_find(swresample swresample.h
   avutil)
 _ffmpeg_find(swscale    swscale.h
@@ -191,7 +191,6 @@ set(libdeps "m;z;lzma;x264;bz2;vpx")
 foreach(lib IN LISTS libdeps)
     find_library(${lib}_LIBRARY NAMES ${lib}
     PATHS
-      "${FFMPEG_ROOT}/lib"
       ~/Library/Frameworks
       /Library/Frameworks
       /usr/local/lib
@@ -214,7 +213,6 @@ set(libdeps_linux "X11;va;va-x11;va-drm;vdpau")
 foreach(lib IN LISTS libdeps_linux)
     find_library(${lib}_LIBRARY NAMES ${lib}
     PATHS
-      "${FFMPEG_ROOT}/lib"
       ~/Library/Frameworks
       /Library/Frameworks
       /usr/local/lib
