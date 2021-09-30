@@ -188,7 +188,7 @@ int main(int argc, char *argv[]) {
 
   // Important, otherwise we don't get frames at all
   if (setPixFmt() == -1) {
-    throw std::runtime_error("Could not set pixel format");
+    std::cout << "Could not set pixel format" << std::endl;
   }
 
   setCameraSetting("ExposureAuto", string("On"));
