@@ -1,9 +1,9 @@
 #include "avutils.hpp"
-#include <mutex>
 #include <atomic>
 #include <chrono>
 #include <iomanip>
 #include <iostream>
+#include <mutex>
 #include <opencv2/highgui.hpp>
 #include <thread>
 
@@ -25,6 +25,8 @@ private:
   AVCodec *codec;
   AVFrame *current_frame;
   AVPacket *current_packet;
+  SwsContext *sws_ctx = nullptr;
+  AVPixelFormat dst_fmt_ = AV_PIX_FMT_RGBA;
 
   std::atomic<bool> stop;
   std::atomic<bool> pause;
@@ -97,17 +99,37 @@ public:
           }
           success = avcodec_receive_frame(dec_ctx, current_frame);
           if (success == 0) {
+            if (!sws_ctx) {
+              sws_ctx =
+                  sws_getContext(current_frame->width, current_frame->height,
+                                 AV_PIX_FMT_YUV420P, current_frame->width,
+                                 current_frame->height, dst_fmt_, SWS_BILINEAR,
+                                 NULL, NULL, NULL);
+            }
             std::cout << "Got frame at " << std::setprecision(5) << std::fixed
                       << duration_cast<milliseconds>(
                              system_clock::now().time_since_epoch())
                                  .count() /
                              1000.0
                       << std::endl;
-            std::lock_guard<std::mutex> lock(mtx);
-            out = avutils::avframeYUV402p2Mat(current_frame);
-            /* cv::imshow("decoded", image); */
-            /* cv::waitKey(2); */
 
+            AVFrame* rgb_frame = av_frame_alloc();
+            rgb_frame->width = current_frame->width;
+            rgb_frame->height = current_frame->height;
+            rgb_frame->format = dst_fmt_;
+            rgb_frame->linesize[0] = rgb_frame->width * 4;
+            rgb_frame->data[0] = new uint8_t[rgb_frame->width * rgb_frame->height * 4];
+
+            sws_scale(sws_ctx, current_frame->data, current_frame->linesize, 0,
+                      rgb_frame->height, rgb_frame->data, rgb_frame->linesize);
+
+            std::vector<int> sizes{rgb_frame->height, rgb_frame->width};
+            std::vector<size_t> steps{
+                static_cast<size_t>(rgb_frame->linesize[0])};
+            std::lock_guard<std::mutex> lock(mtx);
+
+            out = cv::Mat(sizes, CV_8UC4, rgb_frame->data[0], &steps[0]).clone();
+            av_frame_free(&rgb_frame);
             av_frame_unref(current_frame);
           } else {
             std::cout << "Did not get frame " << avutils::av_strerror2(success)

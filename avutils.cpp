@@ -83,7 +83,7 @@ int initialize_codec_stream(AVStream *&stream, AVCodecContext *&codec_ctx,
 
 SwsContext *initialize_sample_scaler(AVCodecContext *codec_ctx, double width,
                                      double height) {
-  SwsContext *swsctx = sws_getContext(width, height, AV_PIX_FMT_BGR24, width,
+  SwsContext *swsctx = sws_getContext(width, height, AV_PIX_FMT_RGB24, width,
                                       height, codec_ctx->pix_fmt, SWS_BICUBIC,
                                       nullptr, nullptr, nullptr);
   return swsctx;
