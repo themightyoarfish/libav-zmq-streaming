@@ -17,6 +17,7 @@
 
 using std::string;
 using namespace Spinnaker::GenApi;
+using namespace std::chrono;
 
 static Spinnaker::SystemPtr spinnaker_system = nullptr;
 static Spinnaker::CameraPtr camera = nullptr;
@@ -187,7 +188,7 @@ int main(int argc, char *argv[]) {
 
   // Important, otherwise we don't get frames at all
   if (setPixFmt() == -1) {
-    throw std::runtime_error("Could not set pixel format");
+    std::cout << "Could not set pixel format" << std::endl;
   }
 
   setCameraSetting("ExposureAuto", string("On"));
@@ -231,9 +232,19 @@ int main(int argc, char *argv[]) {
                     CV_8UC3, currentFrame->GetData(),
                     currentFrame->GetStride());
 
-      /* std::cout << "Sending image" << std::endl; */
+      std::cout << "Begin encode " << std::setprecision(5) << std::fixed
+                << duration_cast<milliseconds>(
+                       system_clock::now().time_since_epoch())
+                           .count() /
+                       1000.0
+                << std::endl;
       transmitter.encode_frame(image);
-      /* std::cout << "Sent image" << std::endl; */
+      std::cout << "Encoded at " << std::setprecision(5) << std::fixed
+                << duration_cast<milliseconds>(
+                       system_clock::now().time_since_epoch())
+                           .count() /
+                       1000.0
+                << std::endl;
       currentFrame = nullptr;
     }
   }

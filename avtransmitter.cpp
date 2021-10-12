@@ -11,8 +11,8 @@ extern "C" {
 }
 
 AVTransmitter::AVTransmitter(const std::string &host, const unsigned int port,
-                             unsigned int fps)
-    : fps_(fps) {
+                             unsigned int fps, unsigned int gop_size, unsigned int target_bitrate )
+    : fps_(fps), sdp_(""), gop_size_(gop_size), target_bitrate_(target_bitrate) {
 
   AVOutputFormat *format = av_guess_format("rtp", nullptr, nullptr);
   if (!format) {
@@ -55,8 +55,8 @@ void AVTransmitter::encode_frame(const cv::Mat &image) {
     first_time = false;
     height_ = image.rows;
     width_ = image.cols;
-    avutils::set_codec_params(this->out_codec_ctx, width_, height_, fps_, 2e6,
-                              6);
+    avutils::set_codec_params(this->out_codec_ctx, width_, height_, fps_, target_bitrate_,
+                              gop_size_);
     int success = avutils::initialize_codec_stream(this->out_stream,
                                                    out_codec_ctx, out_codec);
     this->out_stream->time_base.num = 1;
@@ -64,13 +64,11 @@ void AVTransmitter::encode_frame(const cv::Mat &image) {
     avio_open(&(this->ofmt_ctx->pb), this->ofmt_ctx->filename, AVIO_FLAG_WRITE);
 
     /* Write a file for VLC */
-    char buf[200000];
+    constexpr int buflen = 1024;
+    char buf[buflen] = {0};
     AVFormatContext *ac[] = {this->ofmt_ctx};
-    av_sdp_create(ac, 1, buf, 20000);
-    printf("sdp:\n%s\n", buf);
-    FILE *fsdp = fopen("test.sdp", "w");
-    fprintf(fsdp, "%s", buf);
-    fclose(fsdp);
+    av_sdp_create(ac, 1, buf, buflen);
+    this->sdp_ = std::string(buf);
 
     if (success != 0) {
       throw std::invalid_argument("Could not initialize codec stream " +
@@ -115,13 +113,6 @@ void AVTransmitter::encode_frame(const cv::Mat &image) {
     std::cerr << "Could not write frame: " << avutils::av_strerror2(success)
               << ". Maybe send more input. " << std::endl;
   } else {
-    using namespace std::chrono;
-    std::cout << "Encoded at " << std::setprecision(5) << std::fixed
-              << duration_cast<milliseconds>(
-                     system_clock::now().time_since_epoch())
-                         .count() /
-                     1000.0
-              << std::endl;
     this->frame_ended();
   }
 }
@@ -153,3 +144,6 @@ void AVTransmitter::frame_ended() {
   /*   std::cout << "Could not write AUD" << std::endl; */
   /* } */
 }
+  std::string AVTransmitter::get_sdp() const {
+      return this->sdp_;
+  }
