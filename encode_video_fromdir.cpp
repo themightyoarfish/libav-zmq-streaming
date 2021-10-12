@@ -2,7 +2,6 @@
 #include "avtransmitter.hpp"
 #include "avutils.hpp"
 #include <chrono>
-#include <fstream>
 #include <iostream>
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
@@ -78,7 +77,7 @@ int main(int argc, char *argv[]) {
   cv::glob(glob_expr, filenames);
   std::cout << "Found " << filenames.size() << " images" << std::endl;
   sort(filenames.begin(), filenames.end());
-  const int n_frames =  filenames.size();
+  const int n_frames = 200; // filenames.size();
 
   vector<cv::Mat> images;
   for (int i = 0; i < n_frames; ++i) {
@@ -90,7 +89,6 @@ int main(int argc, char *argv[]) {
 
   int ms = 0;
   const auto begin = chrono::system_clock::now();
-  bool has_sdp = false;
   for (int i = 0; i < n_frames; ++i) {
     auto tic = chrono::system_clock::now();
     auto desired_end_time = begin + milliseconds(budget_ms * (i + 1));
@@ -107,17 +105,6 @@ int main(int argc, char *argv[]) {
                 << std::endl;
     }
     transmitter.encode_frame(image);
-    std::cout << "Encoded at " << std::setprecision(5) << std::fixed
-              << duration_cast<milliseconds>(
-                     system_clock::now().time_since_epoch())
-                         .count() /
-                     1000.0
-              << std::endl;
-    if (!has_sdp) {
-      has_sdp = true;
-      std::ofstream ofs("test.sdp");
-      ofs << transmitter.get_sdp();
-    }
     const auto toc = chrono::system_clock::now();
 
     const auto remaining = desired_end_time - toc;
