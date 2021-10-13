@@ -45,6 +45,7 @@ public:
   }
   RTPReceiver(const std::string &sdp_path = "test.sdp") {
     stop.store(false);
+    pause.store(false);
 
     /* av_log_set_level(AV_LOG_TRACE); */
     fmt_ctx = avformat_alloc_context();
