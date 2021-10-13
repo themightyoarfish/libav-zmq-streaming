@@ -38,7 +38,7 @@ void set_codec_params(AVCodecContext *&codec_ctx, double width, double height,
   if (target_bitrate > 0) {
     codec_ctx->bit_rate = target_bitrate;
   }
-  codec_ctx->thread_count = 10;
+  codec_ctx->thread_count = 1;
   codec_ctx->codec_id = AV_CODEC_ID_VP9;
   codec_ctx->codec_type = AVMEDIA_TYPE_VIDEO;
   codec_ctx->width = width;

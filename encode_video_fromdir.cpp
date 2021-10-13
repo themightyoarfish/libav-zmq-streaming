@@ -85,7 +85,7 @@ int main(int argc, char *argv[]) {
   }
 
   constexpr bool put_text = false;
-  constexpr bool print_timings = true;
+  constexpr bool print_timings = false;
 
   int ms = 0;
   const auto begin = chrono::system_clock::now();
@@ -97,13 +97,13 @@ int main(int argc, char *argv[]) {
       auto stamp = format_timepoint_iso8601(tic);
       cv::putText(image, stamp, cv::Point(10, 20), cv::FONT_HERSHEY_SIMPLEX, 1,
                   cv::Scalar(0, 0, 255), 2);
+    }
       std::cout << "Begin encode at " << std::setprecision(5) << std::fixed
                 << duration_cast<milliseconds>(
                        system_clock::now().time_since_epoch())
                            .count() /
                        1000.0
                 << std::endl;
-    }
     transmitter.encode_frame(image);
     const auto toc = chrono::system_clock::now();
 
