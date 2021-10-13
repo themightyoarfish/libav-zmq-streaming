@@ -62,7 +62,7 @@ public:
 
     /* open input file, and allocate format context */
     if (avformat_open_input(&fmt_ctx, sdp_path.c_str(), NULL, NULL) < 0) {
-      throw std::invalid_argument("Could not open SDP path");
+      throw std::invalid_argument("Could not open SDP path " + sdp_path);
     }
 
     current_packet = new AVPacket;

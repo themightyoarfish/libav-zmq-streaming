@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
               << std::endl;
     return 1;
   }
-  constexpr int fps = 20;
+  constexpr int fps = 30;
   constexpr int budget_ms = 1000.0 / fps;
   AVTransmitter transmitter(rtp_rcv_host, rtp_rcv_port, fps);
 
@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
   cv::glob(glob_expr, filenames);
   std::cout << "Found " << filenames.size() << " images" << std::endl;
   sort(filenames.begin(), filenames.end());
-  const int n_frames =  filenames.size();
+  const int n_frames = 300; // filenames.size();
 
   vector<cv::Mat> images;
   for (int i = 0; i < n_frames; ++i) {
