@@ -1,4 +1,5 @@
 #include "avreceiver.hpp"
+#include <fstream>
 #include "avtransmitter.hpp"
 #include "avutils.hpp"
 #include <chrono>
@@ -86,6 +87,7 @@ int main(int argc, char *argv[]) {
 
   constexpr bool put_text = false;
   constexpr bool print_timings = false;
+  bool has_sdp = false;
 
   int ms = 0;
   const auto begin = chrono::system_clock::now();
@@ -98,13 +100,18 @@ int main(int argc, char *argv[]) {
       cv::putText(image, stamp, cv::Point(10, 20), cv::FONT_HERSHEY_SIMPLEX, 1,
                   cv::Scalar(0, 0, 255), 2);
     }
-      std::cout << "Begin encode at " << std::setprecision(5) << std::fixed
-                << duration_cast<milliseconds>(
-                       system_clock::now().time_since_epoch())
-                           .count() /
-                       1000.0
-                << std::endl;
+    std::cout << "Begin encode at " << std::setprecision(5) << std::fixed
+              << duration_cast<milliseconds>(
+                     system_clock::now().time_since_epoch())
+                         .count() /
+                     1000.0
+              << std::endl;
     transmitter.encode_frame(image);
+    if (!has_sdp) {
+      has_sdp = true;
+      std::ofstream ofs("test.sdp");
+      ofs << transmitter.get_sdp();
+    }
     const auto toc = chrono::system_clock::now();
 
     const auto remaining = desired_end_time - toc;
