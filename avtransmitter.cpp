@@ -11,8 +11,10 @@ extern "C" {
 }
 
 AVTransmitter::AVTransmitter(const std::string &host, const unsigned int port,
-                             unsigned int fps, unsigned int gop_size, unsigned int target_bitrate )
-    : fps_(fps), sdp_(""), gop_size_(gop_size), target_bitrate_(target_bitrate) {
+                             unsigned int fps, unsigned int gop_size,
+                             unsigned int target_bitrate)
+    : fps_(fps), sdp_(""), gop_size_(gop_size),
+      target_bitrate_(target_bitrate) {
 
   AVOutputFormat *format = av_guess_format("rtp", nullptr, nullptr);
   if (!format) {
@@ -55,8 +57,8 @@ void AVTransmitter::encode_frame(const cv::Mat &image) {
     first_time = false;
     height_ = image.rows;
     width_ = image.cols;
-    avutils::set_codec_params(this->out_codec_ctx, width_, height_, fps_, target_bitrate_,
-                              gop_size_);
+    avutils::set_codec_params(this->out_codec_ctx, width_, height_, fps_,
+                              target_bitrate_, gop_size_);
     int success = avutils::initialize_codec_stream(this->out_stream,
                                                    out_codec_ctx, out_codec);
     this->out_stream->time_base.num = 1;
@@ -95,9 +97,8 @@ void AVTransmitter::encode_frame(const cv::Mat &image) {
     imgbuf.resize(height_ * width_ * 3 + 16);
     this->canvas_ =
         cv::Mat(height_, width_, CV_8UC3, imgbuf.data(), width_ * 3);
-  } else {
-    image.copyTo(this->canvas_);
   }
+  image.copyTo(this->canvas_);
   const int stride[] = {static_cast<int>(image.step[0])};
 
   /* cv::imshow("encoded", image); */
@@ -128,11 +129,13 @@ AVTransmitter::~AVTransmitter() {
 void AVTransmitter::frame_ended() {
   // Send an h264 AUD, which tells the receiving end that a frame has ended.
   // seeting the aud option to x264 does not seem to do this, so we do it
-  // manually found this here https://stackoverflow.com/a/60469996/2397253, but i dont
-  // know why they are sending 16 as the 6th byte, AUD is simply 0 0 0 1 9
+  // manually found this here https://stackoverflow.com/a/60469996/2397253, but
+  // i dont know why they are sending 16 as the 6th byte, AUD is simply 0 0 0 1
+  // 9
   // TODO: remove if h264 is not used
   /* AVPacket pkt2 = {0}; */
-  /* // not sure if just using the last frame's pts or and dts like this is wise */
+  /* // not sure if just using the last frame's pts or and dts like this is wise
+   */
   /* pkt2.dts = frame_->pts; */
   /* pkt2.pts = frame_->pts; */
   /* pkt2.data = static_cast<std::uint8_t *>(av_mallocz(5)); */
@@ -144,6 +147,4 @@ void AVTransmitter::frame_ended() {
   /*   std::cout << "Could not write AUD" << std::endl; */
   /* } */
 }
-  std::string AVTransmitter::get_sdp() const {
-      return this->sdp_;
-  }
+std::string AVTransmitter::get_sdp() const { return this->sdp_; }
