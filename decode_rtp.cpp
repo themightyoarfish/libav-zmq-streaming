@@ -45,6 +45,7 @@ public:
   }
   RTPReceiver(const std::string &sdp_path = "test.sdp") {
     stop.store(false);
+    pause.store(false);
 
     /* av_log_set_level(AV_LOG_TRACE); */
     fmt_ctx = avformat_alloc_context();
@@ -62,7 +63,7 @@ public:
 
     /* open input file, and allocate format context */
     if (avformat_open_input(&fmt_ctx, sdp_path.c_str(), NULL, NULL) < 0) {
-      throw std::invalid_argument("Could not open SDP path");
+      throw std::invalid_argument("Could not open SDP path " + sdp_path);
     }
 
     current_packet = new AVPacket;
@@ -119,11 +120,10 @@ public:
             rgb_frame->format = dst_fmt_;
             rgb_frame->linesize[0] = rgb_frame->width * 4;
             rgb_frame->data[0] =
-                new uint8_t[rgb_frame->width * rgb_frame->height * 4];
+                new uint8_t[rgb_frame->width * rgb_frame->height * 4 + 16];
 
             sws_scale(sws_ctx, current_frame->data, current_frame->linesize, 0,
                       rgb_frame->height, rgb_frame->data, rgb_frame->linesize);
-
             std::vector<int> sizes{rgb_frame->height, rgb_frame->width};
             std::vector<size_t> steps{
                 static_cast<size_t>(rgb_frame->linesize[0])};
@@ -138,7 +138,7 @@ public:
                       << std::endl;
           }
         }
-        std::cout << "Exited recv loop loop" << std::endl;
+        std::cout << "Exited recv loop" << std::endl;
       }
     });
   }
