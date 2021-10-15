@@ -1,4 +1,5 @@
 #include "avutils.hpp"
+#include "timeutils.hpp"
 #include <atomic>
 #include <chrono>
 #include <iomanip>
@@ -41,7 +42,7 @@ private:
 public:
   cv::Mat get() {
     std::lock_guard<std::mutex> lock(mtx);
-    return out;
+    return out.clone();
   }
   RTPReceiver(const std::string &sdp_path = "test.sdp") {
     stop.store(false);
@@ -56,7 +57,7 @@ public:
     av_opt_set_int(fmt_ctx, "probesize", 32, 0);
     av_opt_set_int(fmt_ctx, "analyzeduration", 0, 0);
     // do not use over lossy network, fucks it up
-    /* fmt_ctx->max_delay = 0; */
+    fmt_ctx->max_delay = 0;
 
     fmt_ctx->interrupt_callback.opaque = (void *)this;
     fmt_ctx->interrupt_callback.callback = &RTPReceiver::should_interrupt;
@@ -67,7 +68,6 @@ public:
     }
 
     current_packet = new AVPacket;
-    av_init_packet(current_packet);
     codec = avcodec_find_decoder(AV_CODEC_ID_VP9);
     if (!codec) {
       throw std::invalid_argument("Could not find decoder");
@@ -75,13 +75,13 @@ public:
 
     dec_ctx = avcodec_alloc_context3(codec);
 
-    // does nothing, unfortunately
     dec_ctx->thread_count = 1;
     dec_ctx->codec_id = AV_CODEC_ID_VP9;
     dec_ctx->codec_type = AVMEDIA_TYPE_VIDEO;
     dec_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
     dec_ctx->delay = 0;
     /* dec_ctx->thread_type = FF_THREAD_SLICE; */
+    std::cout << std::setprecision(5) << std::fixed << std::endl;
 
     if (avcodec_open2(dec_ctx, codec, nullptr) < 0) {
       throw std::invalid_argument("Could not open context");
@@ -107,12 +107,7 @@ public:
                                  current_frame->height, dst_fmt_, SWS_BILINEAR,
                                  NULL, NULL, NULL);
             }
-            std::cout << "Got frame at " << std::setprecision(5) << std::fixed
-                      << duration_cast<milliseconds>(
-                             system_clock::now().time_since_epoch())
-                                 .count() /
-                             1000.0
-                      << std::endl;
+            std::cout << "Got frame at " << current_millis() << std::endl;
 
             AVFrame *rgb_frame = av_frame_alloc();
             rgb_frame->width = current_frame->width;
@@ -122,15 +117,19 @@ public:
             rgb_frame->data[0] =
                 new uint8_t[rgb_frame->width * rgb_frame->height * 4 + 16];
 
-            sws_scale(sws_ctx, current_frame->data, current_frame->linesize, 0,
-                      rgb_frame->height, rgb_frame->data, rgb_frame->linesize);
+            int slice_h = sws_scale(
+                sws_ctx, current_frame->data, current_frame->linesize, 0,
+                rgb_frame->height, rgb_frame->data, rgb_frame->linesize);
             std::vector<int> sizes{rgb_frame->height, rgb_frame->width};
             std::vector<size_t> steps{
                 static_cast<size_t>(rgb_frame->linesize[0])};
-            std::lock_guard<std::mutex> lock(mtx);
+            {
+              std::lock_guard<std::mutex> lock(mtx);
 
-            out =
-                cv::Mat(sizes, CV_8UC4, rgb_frame->data[0], &steps[0]).clone();
+              out = cv::Mat(sizes, CV_8UC4, rgb_frame->data[0], &steps[0])
+                        .clone();
+              stamp_image(out, system_clock::now(), 0.4);
+            }
             av_frame_free(&rgb_frame);
             av_frame_unref(current_frame);
           } else {
@@ -160,12 +159,14 @@ public:
 };
 
 int main(int argc, char **argv) {
+  /* av_log_set_level(AV_LOG_TRACE); */
   RTPReceiver receiver;
   while (true) {
     cv::Mat image = receiver.get();
     if (!image.empty()) {
+      stamp_image(image, system_clock::now(), 0.6);
       cv::imshow("", image);
-      cv::waitKey(2);
+      cv::waitKey(1);
     }
   }
 }

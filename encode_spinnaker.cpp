@@ -11,6 +11,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include "timeutils.hpp"
 
 #include "SpinGenApi/SpinnakerGenApi.h"
 #include "Spinnaker.h"
@@ -152,7 +153,7 @@ int main(int argc, char *argv[]) {
     std::cout << "Usage: " << argv[0] << " <serial> <host> <port>" << std::endl;
     return 1;
   }
-  constexpr int fps = 20;
+  constexpr int fps = 30;
   AVTransmitter transmitter(rtp_rcv_host, rtp_rcv_port, fps);
 
   spinnaker_system = Spinnaker::System::GetInstance();
@@ -204,7 +205,7 @@ int main(int argc, char *argv[]) {
   while (!stop) {
     /* std::cout << "Gettin frame" << std::endl; */
     try {
-      currentFrame = camera->GetNextImage(100);
+      currentFrame = camera->GetNextImage(10);
       if (currentFrame->IsIncomplete()) {
         std::cout << "Incomplete" << std::endl;
         currentFrame->Release();
@@ -215,7 +216,7 @@ int main(int argc, char *argv[]) {
         currentFrame = nullptr;
       }
     } catch (const Spinnaker::Exception &e) {
-      /* std::cout << "Exception: " << e.what() << std::endl; */
+      std::cout << "Exception: " << e.what() << std::endl;
     }
 
     if (currentFrame) {

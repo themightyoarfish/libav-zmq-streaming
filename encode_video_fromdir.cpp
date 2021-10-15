@@ -1,55 +1,21 @@
 #include "avreceiver.hpp"
-#include <fstream>
 #include "avtransmitter.hpp"
 #include "avutils.hpp"
+#include "timeutils.hpp"
 #include <chrono>
+#include <fstream>
 #include <iostream>
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 #include <thread>
-#include <time.h>
 #include <vector>
-
-using namespace std::chrono;
-
-static int _get_millis_from_tp(const system_clock::time_point &t) {
-  auto duration_ms = duration_cast<milliseconds>(t.time_since_epoch());
-  return duration_ms.count() % 1000;
-}
-
-std::tm _tm_from_tp(const system_clock::time_point &t) {
-  std::tm calendar_time_utc{};
-  const std::time_t as_time_t = system_clock::to_time_t(t);
-  auto return_value = gmtime_r(&as_time_t, &calendar_time_utc);
-  if (!return_value) {
-    throw std::runtime_error(
-        "Could not convert TimePoint to UTC calendar time.");
-  } else {
-    return *return_value;
-  }
-}
-std::string format_timepoint_iso8601(const system_clock::time_point &t,
-                                     bool add_zone = true,
-                                     bool add_millis = true) {
-  const std::tm tm = _tm_from_tp(t);
-
-  std::stringstream ss;
-  ss << std::put_time(&tm, "%Y-%m-%dT%H:%M:%S");
-  if (add_millis) {
-    ss << "." << std::setw(3) << std::setfill('0') << _get_millis_from_tp(t);
-  }
-  if (add_zone) {
-    ss << "Z";
-  }
-  return ss.str();
-}
 
 using namespace std;
 
 int main(int argc, char *argv[]) {
-  /* av_log_set_level(AV_LOG_TRACE); */
+/* av_log_set_level(AV_LOG_TRACE); */
 
   std::cout << "Libav version: " << av_version_info() << std::endl;
 
@@ -70,7 +36,7 @@ int main(int argc, char *argv[]) {
   }
   constexpr int fps = 30;
   constexpr int budget_ms = 1000.0 / fps;
-  AVTransmitter transmitter(rtp_rcv_host, rtp_rcv_port, fps);
+  AVTransmitter transmitter(rtp_rcv_host, rtp_rcv_port, fps, 1);
 
   const string glob_expr = directory + "*." + ext;
   std::cout << "Globbing: " << glob_expr << std::endl;
@@ -82,13 +48,14 @@ int main(int argc, char *argv[]) {
 
   vector<cv::Mat> images;
   for (int i = 0; i < n_frames; ++i) {
-    images.emplace_back(cv::imread(filenames[i]));
+    images.push_back(cv::imread(filenames[i]));
   }
 
-  constexpr bool put_text = false;
+  constexpr bool put_text = true;
   constexpr bool print_timings = false;
   bool has_sdp = false;
 
+  std::cout << std::setprecision(5) << std::fixed;
   int ms = 0;
   const auto begin = chrono::system_clock::now();
   for (int i = 0; i < n_frames; ++i) {
@@ -96,17 +63,11 @@ int main(int argc, char *argv[]) {
     auto desired_end_time = begin + milliseconds(budget_ms * (i + 1));
     cv::Mat &image = images[i];
     if (put_text) {
-      auto stamp = format_timepoint_iso8601(tic);
-      cv::putText(image, stamp, cv::Point(10, 20), cv::FONT_HERSHEY_SIMPLEX, 1,
-                  cv::Scalar(0, 0, 255), 2);
+        stamp_image(image, tic);
     }
-    std::cout << "Begin encode at " << std::setprecision(5) << std::fixed
-              << duration_cast<milliseconds>(
-                     system_clock::now().time_since_epoch())
-                         .count() /
-                     1000.0
-              << std::endl;
+    std::cout << "Begin encode at " << current_millis() << std::endl;
     transmitter.encode_frame(image);
+    std::cout << "Finish encode at " << current_millis() << std::endl;
     if (!has_sdp) {
       has_sdp = true;
       std::ofstream ofs("test.sdp");
