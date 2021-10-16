@@ -1,10 +1,10 @@
 #include "avutils.hpp"
 #include "timeutils.hpp"
 #include <atomic>
+#include <boost/thread/sync_bounded_queue.hpp>
 #include <chrono>
 #include <iomanip>
 #include <iostream>
-#include <mutex>
 #include <opencv2/highgui.hpp>
 #include <thread>
 
@@ -28,11 +28,10 @@ private:
   AVPacket *current_packet;
   SwsContext *sws_ctx = nullptr;
   AVPixelFormat dst_fmt_ = AV_PIX_FMT_RGBA;
+  boost::sync_bounded_queue<cv::Mat> queue;
 
   std::atomic<bool> stop;
   std::atomic<bool> pause;
-  std::mutex mtx;
-  cv::Mat out;
   std::thread runner;
 
   static int should_interrupt(void *opaque) {
@@ -41,10 +40,12 @@ private:
 
 public:
   cv::Mat get() {
-    std::lock_guard<std::mutex> lock(mtx);
-    return out.clone();
+    cv::Mat m;
+    queue.pull_front(m);
+    return m;
   }
-  RTPReceiver(const std::string &sdp_path = "test.sdp") {
+
+  RTPReceiver(const std::string &sdp_path = "test.sdp") : queue(5) {
     stop.store(false);
     pause.store(false);
 
@@ -91,7 +92,9 @@ public:
     runner = std::thread([&]() {
       while (!stop.load()) {
         while (!pause.load() && av_read_frame(fmt_ctx, current_packet) >= 0) {
+          auto packet_received = system_clock::now();
           int success = avcodec_send_packet(dec_ctx, current_packet);
+          auto packet_sent = system_clock::now();
           av_packet_unref(current_packet);
           if (success != 0) {
             std::cout << "Could not send packet: "
@@ -99,6 +102,7 @@ public:
             continue;
           }
           success = avcodec_receive_frame(dec_ctx, current_frame);
+          auto frame_received = system_clock::now();
           if (success == 0) {
             if (!sws_ctx) {
               sws_ctx =
@@ -107,7 +111,6 @@ public:
                                  current_frame->height, dst_fmt_, SWS_BILINEAR,
                                  NULL, NULL, NULL);
             }
-            std::cout << "Got frame at " << current_millis() << std::endl;
 
             AVFrame *rgb_frame = av_frame_alloc();
             rgb_frame->width = current_frame->width;
@@ -123,13 +126,22 @@ public:
             std::vector<int> sizes{rgb_frame->height, rgb_frame->width};
             std::vector<size_t> steps{
                 static_cast<size_t>(rgb_frame->linesize[0])};
-            {
-              std::lock_guard<std::mutex> lock(mtx);
-
-              out = cv::Mat(sizes, CV_8UC4, rgb_frame->data[0], &steps[0])
-                        .clone();
-              stamp_image(out, system_clock::now(), 0.4);
-            }
+            cv::Mat image(sizes, CV_8UC4, rgb_frame->data[0], &steps[0])
+                ;
+            auto image_created = system_clock::now();
+            stamp_image(image, packet_received, 0.2);
+            stamp_image(image, packet_sent, 0.4);
+            stamp_image(image, image_created, 0.6);
+            queue.push_back(image.clone());
+            std::cout << "Packet received: "
+                      << format_timepoint_iso8601(packet_received) << std::endl;
+            std::cout << "Packet sent: "
+                      << format_timepoint_iso8601(packet_sent) << std::endl;
+            std::cout << "Frame received: "
+                      << format_timepoint_iso8601(frame_received) << std::endl;
+            std::cout << "Image stamped: "
+                      << format_timepoint_iso8601(system_clock::now())
+                      << std::endl;
             av_frame_free(&rgb_frame);
             av_frame_unref(current_frame);
           } else {
@@ -164,8 +176,13 @@ int main(int argc, char **argv) {
   while (true) {
     cv::Mat image = receiver.get();
     if (!image.empty()) {
-      stamp_image(image, system_clock::now(), 0.6);
+      auto image_displayed = system_clock::now();
+      stamp_image(image, image_displayed, 0.8);
+      std::cout << "Image display started: "
+                << format_timepoint_iso8601(image_displayed) << std::endl;
       cv::imshow("", image);
+      std::cout << "Image displayed: "
+                << format_timepoint_iso8601(system_clock::now()) << std::endl;
       cv::waitKey(1);
     }
   }
