@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
   }
   constexpr int fps = 30;
   constexpr int budget_ms = 1000.0 / fps;
-  AVTransmitter transmitter(rtp_rcv_host, rtp_rcv_port, fps, 6, 5e5);
+  AVTransmitter transmitter(rtp_rcv_host, rtp_rcv_port, fps, 6, 5e6);
 
   const string glob_expr = directory + "*." + ext;
   std::cout << "Globbing: " << glob_expr << std::endl;
