@@ -57,6 +57,13 @@ int initialize_codec_stream(AVStream *&stream, AVCodecContext *&codec_ctx,
   av_dict_set(&codec_options, "preset", "ultrafast", 0);
   av_dict_set(&codec_options, "tune", "zerolatency", 0);
   av_dict_set_int(&codec_options, "aud", 1, 0);
+  /* av_dict_set(&codec_options, "deadline", "realtime", 0); */
+  /* av_dict_set(&codec_options, "quality", "realtime", 0); */
+  /* av_dict_set_int(&codec_options, "speed", 8, 0); */
+  /* av_dict_set_int(&codec_options, "row-mt", 1, 0); */
+  /* av_dict_set_int(&codec_options, "lag-in-frames", 0, 0); */
+  /* av_dict_set_int(&codec_options, "tile-columns", 5, 0); */
+  /* av_dict_set_int(&codec_options, "frame-parallel", 0, 0); */
 
   // open video encoder
   int ret = avcodec_open2(codec_ctx, codec, &codec_options);

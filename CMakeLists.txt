@@ -5,6 +5,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
 set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_LIST_DIR})
 add_compile_options(-fno-lto)
 
+find_package(Boost COMPONENTS REQUIRED)
 find_package(OpenCV COMPONENTS core highgui imgcodecs imgproc REQUIRED)
 # Caution: due to either buggyness or horrendous design of gcc/ld/whatever, the order of
 # the libraries is important for linking: if lib A depends on stuff from lib B, lib B
@@ -16,9 +17,9 @@ find_package(Spinnaker 1.24.0.60 REQUIRED)
 find_package(cppzmq REQUIRED)
 set(cppzmq_LIBRARIES cppzmq)
 set(LOCAL_INCLUDE_DIRS ${CMAKE_CURRENT_LIST_DIR})
-set(THIRD_PARTY_INCLUDE_DIRS ${OpenCV_INCLUDE_DIRS} ${cppzmq_INCLUDE_DIRS}
+set(THIRD_PARTY_INCLUDE_DIRS ${BOOST_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS} ${cppzmq_INCLUDE_DIRS}
     ${FFMPEG_INCLUDE_DIRS} ${Spinnaker_INCLUDE_DIR})
-set(THIRD_PARTY_LIBRARIES ${OpenCV_LIBRARIES} ${cppzmq_LIBRARIES}
+set(THIRD_PARTY_LIBRARIES ${BOOST_LIBRARIES} ${OpenCV_LIBRARIES} ${cppzmq_LIBRARIES}
     ${FFMPEG_LIBRARIES} ${Spinnaker_LIBRARIES} ${CMAKE_DL_LIBS})
 set(COMMON_SRC ${CMAKE_CURRENT_LIST_DIR}/avutils.cpp)
 set(ENCODER_SRC ${CMAKE_CURRENT_LIST_DIR}/encode_video_fromdir.cpp

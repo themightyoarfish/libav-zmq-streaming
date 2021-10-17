@@ -1,7 +1,7 @@
 #include "avreceiver.hpp"
 #include "avtransmitter.hpp"
 #include "avutils.hpp"
-#include "timeutils.hpp"
+#include "time_functions.hpp"
 #include <chrono>
 #include <fstream>
 #include <iostream>
@@ -15,7 +15,7 @@
 using namespace std;
 
 int main(int argc, char *argv[]) {
-/* av_log_set_level(AV_LOG_TRACE); */
+  /* av_log_set_level(AV_LOG_TRACE); */
 
   std::cout << "Libav version: " << av_version_info() << std::endl;
 
@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
   }
   constexpr int fps = 30;
   constexpr int budget_ms = 1000.0 / fps;
-  AVTransmitter transmitter(rtp_rcv_host, rtp_rcv_port, fps, 1);
+  AVTransmitter transmitter(rtp_rcv_host, rtp_rcv_port, fps, 6, 5e6);
 
   const string glob_expr = directory + "*." + ext;
   std::cout << "Globbing: " << glob_expr << std::endl;
@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
   }
 
   constexpr bool put_text = true;
-  constexpr bool print_timings = false;
+  constexpr bool print_timings = true;
   bool has_sdp = false;
 
   std::cout << std::setprecision(5) << std::fixed;
@@ -63,11 +63,13 @@ int main(int argc, char *argv[]) {
     auto desired_end_time = begin + milliseconds(budget_ms * (i + 1));
     cv::Mat &image = images[i];
     if (put_text) {
-        stamp_image(image, tic);
+      stamp_image(image, tic, 0.1);
     }
-    std::cout << "Begin encode at " << current_millis() << std::endl;
+    std::cout << "Begin encode at "
+              << format_timepoint_iso8601(system_clock::now()) << std::endl;
     transmitter.encode_frame(image);
-    std::cout << "Finish encode at " << current_millis() << std::endl;
+    std::cout << "Finish encode at "
+              << format_timepoint_iso8601(system_clock::now()) << std::endl;
     if (!has_sdp) {
       has_sdp = true;
       std::ofstream ofs("test.sdp");
