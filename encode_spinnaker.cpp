@@ -11,7 +11,7 @@
 #include <string>
 #include <thread>
 #include <vector>
-#include "timeutils.hpp"
+#include "time_functions.hpp"
 
 #include "SpinGenApi/SpinnakerGenApi.h"
 #include "Spinnaker.h"
@@ -154,7 +154,7 @@ int main(int argc, char *argv[]) {
     return 1;
   }
   constexpr int fps = 30;
-  AVTransmitter transmitter(rtp_rcv_host, rtp_rcv_port, fps);
+  AVTransmitter transmitter(rtp_rcv_host, rtp_rcv_port, fps, 10, 5'000'000);
 
   spinnaker_system = Spinnaker::System::GetInstance();
 
@@ -173,6 +173,27 @@ int main(int argc, char *argv[]) {
   // Initialize camera
   std::cout << "Init camera" << std::endl;
   camera->Init();
+
+  INodeMap& snodeMap = camera->GetTLStreamNodeMap();
+
+  CEnumerationPtr ptrStreamBufferHandling =
+      snodeMap.GetNode("StreamBufferHandlingMode");
+  if (!IsAvailable(ptrStreamBufferHandling) ||
+      !IsWritable(ptrStreamBufferHandling)) {
+    throw std::invalid_argument(
+        "Node StreamBufferHandlingMode not available or writeable");
+  }
+  // Retrieve entry node from enumeration node
+  CEnumEntryPtr ptrStreamBufferHandlingModeNewestOnly =
+      ptrStreamBufferHandling->GetEntryByName("NewestOnly");
+  if (!IsAvailable(ptrStreamBufferHandlingModeNewestOnly) ||
+      !IsReadable(ptrStreamBufferHandlingModeNewestOnly)) {
+    throw std::invalid_argument("Unable to read node 'NewestOnly'");
+  }
+
+  int64_t streamBufferHandlingModeNewestOnly =
+      ptrStreamBufferHandlingModeNewestOnly->GetValue();
+  ptrStreamBufferHandling->SetIntValue(streamBufferHandlingModeNewestOnly);
 
   /* resetUserSet(); */
 
@@ -239,7 +260,10 @@ int main(int argc, char *argv[]) {
                            .count() /
                        1000.0
                 << std::endl;
+      stamp_image(image, system_clock::now(), 0.1);
+      auto tic = current_millis();
       transmitter.encode_frame(image);
+      std::cout << "Took " << 1000*(current_millis() - tic )<< std::endl;
       std::cout << "Encoded at " << std::setprecision(5) << std::fixed
                 << duration_cast<milliseconds>(
                        system_clock::now().time_since_epoch())

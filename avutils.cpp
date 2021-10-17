@@ -62,7 +62,7 @@ int initialize_codec_stream(AVStream *&stream, AVCodecContext *&codec_ctx,
   av_dict_set_int(&codec_options, "speed", 8, 0);
   av_dict_set_int(&codec_options, "row-mt", 1, 0);
   av_dict_set_int(&codec_options, "lag-in-frames", 0, 0);
-  av_dict_set_int(&codec_options, "tile-columns", 4, 0);
+  av_dict_set_int(&codec_options, "tile-columns", 5, 0);
   av_dict_set_int(&codec_options, "frame-parallel", 0, 0);
 
   // open video encoder

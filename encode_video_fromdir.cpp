@@ -1,7 +1,7 @@
 #include "avreceiver.hpp"
 #include "avtransmitter.hpp"
 #include "avutils.hpp"
-#include "timeutils.hpp"
+#include "time_functions.hpp"
 #include <chrono>
 #include <fstream>
 #include <iostream>
