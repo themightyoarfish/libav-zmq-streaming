@@ -128,7 +128,7 @@ AVTransmitter::~AVTransmitter() {
 
 void AVTransmitter::frame_ended() {
   // Send an h264 AUD, which tells the receiving end that a frame has ended.
-  // seeting the aud option to x264 does not seem to do this, so we do it
+  // setting the aud option to x264 does not seem to do this, so we do it
   // manually found this here https://stackoverflow.com/a/60469996/2397253, but
   // i dont know why they are sending 16 as the 6th byte, AUD is simply 0 0 0 1
   // 9
