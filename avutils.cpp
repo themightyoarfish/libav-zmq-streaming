@@ -39,7 +39,7 @@ void set_codec_params(AVCodecContext *&codec_ctx, double width, double height,
     codec_ctx->bit_rate = target_bitrate;
   }
   codec_ctx->thread_count = 1;
-  codec_ctx->codec_id = AV_CODEC_ID_VP9;
+  codec_ctx->codec_id = AV_CODEC_ID_H264;
   codec_ctx->codec_type = AVMEDIA_TYPE_VIDEO;
   codec_ctx->width = width;
   codec_ctx->height = height;
@@ -53,17 +53,17 @@ void set_codec_params(AVCodecContext *&codec_ctx, double width, double height,
 int initialize_codec_stream(AVStream *&stream, AVCodecContext *&codec_ctx,
                             AVCodec *&codec) {
   AVDictionary *codec_options = nullptr;
-  /* av_dict_set(&codec_options, "profile", "high", 0); */
-  /* av_dict_set(&codec_options, "preset", "ultrafast", 0); */
-  /* av_dict_set(&codec_options, "tune", "zerolatency", 0); */
-  /* av_dict_set_int(&codec_options, "aud", 1, 0); */
-  av_dict_set(&codec_options, "deadline", "realtime", 0);
-  av_dict_set(&codec_options, "quality", "realtime", 0);
-  av_dict_set_int(&codec_options, "speed", 8, 0);
-  av_dict_set_int(&codec_options, "row-mt", 1, 0);
-  av_dict_set_int(&codec_options, "lag-in-frames", 0, 0);
-  av_dict_set_int(&codec_options, "tile-columns", 5, 0);
-  av_dict_set_int(&codec_options, "frame-parallel", 0, 0);
+  av_dict_set(&codec_options, "profile", "high", 0);
+  av_dict_set(&codec_options, "preset", "ultrafast", 0);
+  av_dict_set(&codec_options, "tune", "zerolatency", 0);
+  av_dict_set_int(&codec_options, "aud", 1, 0);
+  /* av_dict_set(&codec_options, "deadline", "realtime", 0); */
+  /* av_dict_set(&codec_options, "quality", "realtime", 0); */
+  /* av_dict_set_int(&codec_options, "speed", 8, 0); */
+  /* av_dict_set_int(&codec_options, "row-mt", 1, 0); */
+  /* av_dict_set_int(&codec_options, "lag-in-frames", 0, 0); */
+  /* av_dict_set_int(&codec_options, "tile-columns", 5, 0); */
+  /* av_dict_set_int(&codec_options, "frame-parallel", 0, 0); */
 
   // open video encoder
   int ret = avcodec_open2(codec_ctx, codec, &codec_options);

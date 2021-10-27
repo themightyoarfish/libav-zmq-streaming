@@ -12,7 +12,8 @@ find_package(OpenCV COMPONENTS core highgui imgcodecs imgproc REQUIRED)
 # *must* come after lib A. it does not help if lib B has already been passed previously
 find_package(FFMPEG REQUIRED COMPONENTS  avdevice  avformat swscale
     avcodec avutil swresample)
-message(STATUS ${FFMPEG_LIBRARIES})
+message(STATUS "FFMPEG_LIBRARIES: ${FFMPEG_LIBRARIES}")
+message(STATUS "FFMPEG_INCLUDE_DIRS: ${FFMPEG_INCLUDE_DIRS}")
 find_package(Spinnaker 1.24.0.60 REQUIRED)
 find_package(cppzmq REQUIRED)
 set(cppzmq_LIBRARIES cppzmq)
@@ -29,7 +30,8 @@ set(DECODER_SRC ${CMAKE_CURRENT_LIST_DIR}/decode_video_zmq.cpp
 add_executable(encode_video_fromdir)
 target_sources(encode_video_fromdir PRIVATE ${ENCODER_SRC} ${COMMON_SRC})
 target_include_directories(encode_video_fromdir PRIVATE ${LOCAL_INCLUDE_DIRS}
-    ${THIRD_PARTY_INCLUDE_DIRS})
+    )
+target_include_directories(encode_video_fromdir PRIVATE SYSTEM ${THIRD_PARTY_INCLUDE_DIRS})
 target_link_libraries(encode_video_fromdir ${THIRD_PARTY_LIBRARIES})
 
 add_executable(decode_video_zmq)
@@ -50,3 +52,4 @@ add_executable(decode_rtp)
 target_sources(decode_rtp PRIVATE
     decode_rtp.cpp ${COMMON_SRC})
 target_link_libraries(decode_rtp ${THIRD_PARTY_LIBRARIES})
+target_include_directories(decode_rtp PRIVATE ${LOCAL_INCLUDE_DIRS} ${THIRD_PARTY_INCLUDE_DIRS})
