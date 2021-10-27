@@ -27,7 +27,7 @@ private:
   AVFrame *current_frame;
   AVPacket *current_packet;
   SwsContext *sws_ctx = nullptr;
-  AVPixelFormat dst_fmt_ = AV_PIX_FMT_RGBA;
+  AVPixelFormat dst_fmt_ = AV_PIX_FMT_BGRA;
   boost::sync_bounded_queue<cv::Mat> queue;
 
   std::atomic<bool> stop;
@@ -69,7 +69,7 @@ public:
     }
 
     current_packet = new AVPacket;
-    codec = avcodec_find_decoder(AV_CODEC_ID_H264);
+    codec = avcodec_find_decoder(AV_CODEC_ID_VP9);
     if (!codec) {
       throw std::invalid_argument("Could not find decoder");
     }
@@ -77,7 +77,7 @@ public:
     dec_ctx = avcodec_alloc_context3(codec);
 
     dec_ctx->thread_count = 1;
-    dec_ctx->codec_id = AV_CODEC_ID_H264;
+    dec_ctx->codec_id = AV_CODEC_ID_VP9;
     dec_ctx->codec_type = AVMEDIA_TYPE_VIDEO;
     dec_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
     dec_ctx->delay = 0;
