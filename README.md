@@ -1,4 +1,4 @@
-# libav-zmq-streaming
+# libffmpeg-zmq-streaming
 Originally, this code would encode camera or directory images to h264 and just send
 those packets via zmq to a subscriber.
 
@@ -53,8 +53,8 @@ And that also has 200ms delay.
 
 
 # Dependencies
-Unfortunately this is a bit shitty because there is no cmake support for libav. I pilfered a cmake script for finding ffmpeg from VTK (i think),
-but they do not include a bunch of library dependencies (not sure if forgotten or not necessary for certain versions of libav), so I hacked them in there until it worked.
+Unfortunately this is a bit shitty because there is no cmake support for libffmpeg. I pilfered a cmake script for finding ffmpeg from VTK (i think),
+but they do not include a bunch of library dependencies (not sure if forgotten or not necessary for certain versions of libffmpeg), so I hacked them in there until it worked.
 
 Basically you need most (but strangely not all) thats outlined here: https://trac.ffmpeg.org/wiki/CompilationGuide/Ubuntu
 
