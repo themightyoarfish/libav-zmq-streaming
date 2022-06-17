@@ -46,7 +46,7 @@ This streaming process has a delay of at least 0.5s, which I could not get down,
 The lowest-latency invocation I have found is
 
 ```
-ffplay - -probesize 32 -analyzeduration 0 -fflags nobuffer -fflags discardcorrupt -flags low_delay -sync ext -framedrop -avioflags direct -protocol_whitelist "file,udp,rtp" test.sdp
+ffplay -probesize 32 -analyzeduration 0 -fflags nobuffer -fflags discardcorrupt -flags low_delay -sync ext -framedrop -avioflags direct -protocol_whitelist "file,udp,rtp" test.sdp
 ```
 
 And that also has 200ms delay.
