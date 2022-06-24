@@ -23,7 +23,7 @@ AVTransmitter::AVTransmitter(const std::string &host, const unsigned int port,
   const auto url = std::string("rtp://") + host + ":" + std::to_string(port);
   int success =
       avutils::initialize_avformat_context(this->ofmt_ctx, format, url.c_str());
-  /* this->ofmt_ctx->strict_std_compliance = FF_COMPLIANCE_EXPERIMENTAL; */
+  this->ofmt_ctx->strict_std_compliance = FF_COMPLIANCE_EXPERIMENTAL;
   this->ofmt_ctx->flags = AVFMT_FLAG_NOBUFFER | AVFMT_FLAG_FLUSH_PACKETS;
 
   if (success != 0) {
