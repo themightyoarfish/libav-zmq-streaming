@@ -57,8 +57,7 @@ ffplay -probesize 32 -analyzeduration 0 -fflags nobuffer -fflags discardcorrupt 
 And that also has 200ms delay.
 
 You can use `decode_rtp <sdpfile>` binary to be a little better. You can change the
-`max_delay` to adjust reorder tolerance in the code, or disable reordering by not
-setting it at all.
+`max_delay` to adjust reorder tolerance in the code, or disable reordering by setting it to 0. This doesn't work over lossy links though.
 
 # Dependencies
 
