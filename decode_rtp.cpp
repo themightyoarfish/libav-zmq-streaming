@@ -49,7 +49,7 @@ public:
     stop.store(false);
     pause.store(false);
 
-    /* av_log_set_level(AV_LOG_TRACE); */
+    av_log_set_level(AV_LOG_TRACE);
     fmt_ctx = avformat_alloc_context();
     fmt_ctx->flags |= (AVFMT_FLAG_NOBUFFER | AVFMT_FLAG_DISCARD_CORRUPT |
                        AVFMT_FLAG_FLUSH_PACKETS);
@@ -57,8 +57,10 @@ public:
     av_opt_set_int(fmt_ctx, "fpsprobesize", 0, 0);
     av_opt_set_int(fmt_ctx, "probesize", 32, 0);
     av_opt_set_int(fmt_ctx, "analyzeduration", 0, 0);
-    // do not use over lossy network, fucks it up
-    fmt_ctx->max_delay = 0;
+    // do set to 0 over lossy network, fucks it up and you get
+    // Invalid data in avcodec_send_packet()
+    // we accept 0.1s reordering delay
+    fmt_ctx->max_delay = 1'000'000 / 10;
 
     fmt_ctx->interrupt_callback.opaque = (void *)this;
     fmt_ctx->interrupt_callback.callback = &RTPReceiver::should_interrupt;
@@ -126,8 +128,7 @@ public:
             std::vector<int> sizes{rgb_frame->height, rgb_frame->width};
             std::vector<size_t> steps{
                 static_cast<size_t>(rgb_frame->linesize[0])};
-            cv::Mat image(sizes, CV_8UC4, rgb_frame->data[0], &steps[0])
-                ;
+            cv::Mat image(sizes, CV_8UC4, rgb_frame->data[0], &steps[0]);
             auto image_created = system_clock::now();
             stamp_image(image, packet_received, 0.2);
             stamp_image(image, packet_sent, 0.4);
