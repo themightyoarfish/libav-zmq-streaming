@@ -27,7 +27,7 @@ private:
   AVFrame *current_frame;
   AVPacket *current_packet;
   SwsContext *sws_ctx = nullptr;
-  AVPixelFormat dst_fmt_ = AV_PIX_FMT_RGBA;
+  AVPixelFormat dst_fmt_ = AV_PIX_FMT_BGRA;
   boost::sync_bounded_queue<cv::Mat> queue;
 
   std::atomic<bool> stop;
@@ -45,11 +45,11 @@ public:
     return m;
   }
 
-  RTPReceiver(const std::string &sdp_path = "test.sdp") : queue(5) {
+  RTPReceiver(const std::string &sdp_path) : queue(5) {
     stop.store(false);
     pause.store(false);
 
-    /* av_log_set_level(AV_LOG_TRACE); */
+    av_log_set_level(AV_LOG_TRACE);
     fmt_ctx = avformat_alloc_context();
     fmt_ctx->flags |= (AVFMT_FLAG_NOBUFFER | AVFMT_FLAG_DISCARD_CORRUPT |
                        AVFMT_FLAG_FLUSH_PACKETS);
@@ -57,8 +57,10 @@ public:
     av_opt_set_int(fmt_ctx, "fpsprobesize", 0, 0);
     av_opt_set_int(fmt_ctx, "probesize", 32, 0);
     av_opt_set_int(fmt_ctx, "analyzeduration", 0, 0);
-    // do not use over lossy network, fucks it up
-    fmt_ctx->max_delay = 0;
+    // do set to 0 over lossy network, fucks it up and you get
+    // Invalid data in avcodec_send_packet()
+    // we accept 0.1s reordering delay
+    fmt_ctx->max_delay = 1'000'000 / 10;
 
     fmt_ctx->interrupt_callback.opaque = (void *)this;
     fmt_ctx->interrupt_callback.callback = &RTPReceiver::should_interrupt;
@@ -69,7 +71,7 @@ public:
     }
 
     current_packet = new AVPacket;
-    codec = avcodec_find_decoder(AV_CODEC_ID_H264);
+    codec = avcodec_find_decoder(AV_CODEC_ID_VP9);
     if (!codec) {
       throw std::invalid_argument("Could not find decoder");
     }
@@ -77,7 +79,7 @@ public:
     dec_ctx = avcodec_alloc_context3(codec);
 
     dec_ctx->thread_count = 1;
-    dec_ctx->codec_id = AV_CODEC_ID_H264;
+    dec_ctx->codec_id = AV_CODEC_ID_VP9;
     dec_ctx->codec_type = AVMEDIA_TYPE_VIDEO;
     dec_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
     dec_ctx->delay = 0;
@@ -126,8 +128,7 @@ public:
             std::vector<int> sizes{rgb_frame->height, rgb_frame->width};
             std::vector<size_t> steps{
                 static_cast<size_t>(rgb_frame->linesize[0])};
-            cv::Mat image(sizes, CV_8UC4, rgb_frame->data[0], &steps[0])
-                ;
+            cv::Mat image(sizes, CV_8UC4, rgb_frame->data[0], &steps[0]);
             auto image_created = system_clock::now();
             stamp_image(image, packet_received, 0.2);
             stamp_image(image, packet_sent, 0.4);
@@ -172,7 +173,7 @@ public:
 
 int main(int argc, char **argv) {
   /* av_log_set_level(AV_LOG_TRACE); */
-  RTPReceiver receiver;
+  RTPReceiver receiver(argc > 1 ? argv[1] : "test.sdp");
   while (true) {
     cv::Mat image = receiver.get();
     if (!image.empty()) {

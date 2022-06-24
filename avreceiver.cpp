@@ -19,7 +19,7 @@ AVReceiver::AVReceiver(const std::string &host, const unsigned int port)
   socket.set(zmq::sockopt::rcvhwm, 2);
   socket.connect(connect_str);
   std::cout << "Connected socket to " << connect_str << std::endl;
-  const AVCodec *codec = avcodec_find_decoder(AV_CODEC_ID_H264);
+  const AVCodec *codec = avcodec_find_decoder(AV_CODEC_ID_VP9);
   if (!codec) {
     throw std::runtime_error("Could not find decoder");
   }
