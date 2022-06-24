@@ -1,8 +1,10 @@
 # libffmpeg-zmq-streaming
+
 Originally, this code would encode camera or directory images to h264 and just send
 those packets via zmq to a subscriber.
 
-I have since enabled RTP transport, so the stream can be played with ffplay and VLC.
+I have since enabled RTP transport, so the stream can be played with ffplay and VLC
+(with h264 only).
 
 ## Binaries
 
@@ -21,6 +23,9 @@ number, so the port gets changed when odd (wtf).
 
 
 # Streaming to VLC
+
+The current code uses VP9, which won't work with VLC, but the h264 stuff is still there
+commented out.
 
 VLC can stream this with
 
@@ -51,8 +56,12 @@ ffplay -probesize 32 -analyzeduration 0 -fflags nobuffer -fflags discardcorrupt 
 
 And that also has 200ms delay.
 
+You can use `decode_rtp <sdpfile>` binary to be a little better. You can change the
+`max_delay` to adjust reorder tolerance in the code, or disable reordering by not
+setting it at all.
 
 # Dependencies
+
 Unfortunately this is a bit shitty because there is no cmake support for libffmpeg. I pilfered a cmake script for finding ffmpeg from VTK (i think),
 but they do not include a bunch of library dependencies (not sure if forgotten or not necessary for certain versions of libffmpeg), so I hacked them in there until it worked.
 
@@ -77,6 +86,10 @@ this->ofmt_ctx->strict_std_compliance = FF_COMPLIANCE_EXPERIMENTAL;
 
 However, VLC does not seem to support that so the point is moot, unless you can use
 ffplay or write your own receiver with libavcodec.
+
+This code needs ffmpeg version 4.4 right now, because it would need to update for their
+breaking API changes. If you have that installed to some prefix that's not a system
+prefix, use `-DFFMPEG_ROOT=<prefix>` during `cmake`.
 
 # Performance
 
