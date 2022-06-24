@@ -45,7 +45,7 @@ public:
     return m;
   }
 
-  RTPReceiver(const std::string &sdp_path = "test.sdp") : queue(5) {
+  RTPReceiver(const std::string &sdp_path) : queue(5) {
     stop.store(false);
     pause.store(false);
 
@@ -173,7 +173,7 @@ public:
 
 int main(int argc, char **argv) {
   /* av_log_set_level(AV_LOG_TRACE); */
-  RTPReceiver receiver;
+  RTPReceiver receiver(argc > 1 ? argv[1] : "test.sdp");
   while (true) {
     cv::Mat image = receiver.get();
     if (!image.empty()) {
