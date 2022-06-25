@@ -14,7 +14,7 @@ find_package(FFMPEG REQUIRED COMPONENTS  avdevice  avformat swscale
     avcodec avutil swresample)
 message(STATUS "FFMPEG_LIBRARIES: ${FFMPEG_LIBRARIES}")
 message(STATUS "FFMPEG_INCLUDE_DIRS: ${FFMPEG_INCLUDE_DIRS}")
-find_package(Spinnaker 1.24.0.60 REQUIRED)
+find_package(Spinnaker 1.24.0.60)
 find_package(cppzmq REQUIRED)
 set(cppzmq_LIBRARIES cppzmq)
 set(LOCAL_INCLUDE_DIRS ${CMAKE_CURRENT_LIST_DIR})
@@ -40,14 +40,15 @@ target_include_directories(decode_video_zmq PRIVATE ${LOCAL_INCLUDE_DIRS}
     ${THIRD_PARTY_INCLUDE_DIRS})
 target_link_libraries(decode_video_zmq ${THIRD_PARTY_LIBRARIES})
 
-add_executable(encode_spinnaker)
-target_sources(encode_spinnaker PRIVATE
-    ${CMAKE_CURRENT_LIST_DIR}/encode_spinnaker.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/avtransmitter.cpp ${COMMON_SRC})
-target_include_directories(encode_spinnaker PRIVATE ${LOCAL_INCLUDE_DIRS}
-    ${THIRD_PARTY_INCLUDE_DIRS})
-target_link_libraries(encode_spinnaker ${THIRD_PARTY_LIBRARIES})
-
+if(${SPINNAKER_FOUND})
+  add_executable(encode_spinnaker)
+  target_sources(encode_spinnaker PRIVATE
+      ${CMAKE_CURRENT_LIST_DIR}/encode_spinnaker.cpp
+      ${CMAKE_CURRENT_LIST_DIR}/avtransmitter.cpp ${COMMON_SRC})
+  target_include_directories(encode_spinnaker PRIVATE ${LOCAL_INCLUDE_DIRS}
+      ${THIRD_PARTY_INCLUDE_DIRS})
+  target_link_libraries(encode_spinnaker ${THIRD_PARTY_LIBRARIES})
+endif()
 add_executable(decode_rtp)
 target_sources(decode_rtp PRIVATE
     decode_rtp.cpp ${COMMON_SRC})
