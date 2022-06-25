@@ -212,7 +212,7 @@ foreach(lib IN LISTS libdeps)
     message(STATUS "Found dependency ${${lib}_LIBRARY}")
   else()
     message(STATUS "Did not find dependency ${${lib}_LIBRARY}")
-    set(FFMPEG_FOUND 0 PARENT_SCOPE)
+    set(FFMPEG_FOUND 0)
   endif()
 endforeach()
 
