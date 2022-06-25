@@ -189,26 +189,31 @@ endif ()
 
 set(libdeps "m;z;lzma;bz2;vpx")
 foreach(lib IN LISTS libdeps)
-    if(${FFMPEG_FIND_REQUIRED})
-      set(IS_REQUIRED REQUIRED)
-    endif
-    find_library(${lib}_LIBRARY NAMES ${lib}
-    PATHS
-      ~/Library/Frameworks
-      /Library/Frameworks
-      /usr/local/lib
-      /usr/local/lib64
-      /usr/lib
-      /usr/lib64
-      /sw/lib
-      /opt/local/lib
-      /opt/csw/lib
-      /opt/lib
-      /usr/freeware/lib64
-      "${FFMPEG_ROOT}/bin"
-    ${IS_REQUIRED})
+  if(${FFMPEG_FIND_REQUIRED})
+    set(IS_REQUIRED REQUIRED)
+  endif()
+  find_library(${lib}_LIBRARY NAMES ${lib}
+  PATHS
+    ~/Library/Frameworks
+    /Library/Frameworks
+    /usr/local/lib
+    /usr/local/lib64
+    /usr/lib
+    /usr/lib64
+    /sw/lib
+    /opt/local/lib
+    /opt/csw/lib
+    /opt/lib
+    /usr/freeware/lib64
+    "${FFMPEG_ROOT}/bin"
+  ${IS_REQUIRED})
+  if(${${lib}_LIBRARY_FOUND})
     list(APPEND FFMPEG_LIBRARIES ${${lib}_LIBRARY})
     message(STATUS "Found dependency ${${lib}_LIBRARY}")
+  else()
+    message(STATUS "Did not find dependency ${${lib}_LIBRARY}")
+    set(FFMPEG_FOUND 0 PARENT_SCOPE)
+  endif()
 endforeach()
 
 if (CMAKE_SYSTEM_NAME MATCHES Linux)
