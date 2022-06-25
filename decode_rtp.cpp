@@ -185,7 +185,7 @@ int main(int argc, char** argv) {
     cv::Mat image = receiver.get();
     if (!image.empty()) {
       auto image_displayed = system_clock::now();
-      stamp_image(image, image_displayed, 0.8);
+      // stamp_image(image, image_displayed, 0.8);
       std::cout << "Image display started: "
                 << format_timepoint_iso8601(image_displayed) << std::endl;
       cv::imshow("", image);
