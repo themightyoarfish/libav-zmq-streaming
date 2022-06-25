@@ -1,8 +1,8 @@
 project(zmq-streaming C CXX)
 cmake_minimum_required(VERSION 3.15)
 set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
-set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_LIST_DIR})
+set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
+LIST(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_LIST_DIR})
 add_compile_options(-fno-lto)
 
 option(WITH_SPINNAKER "Use spinnaker?" OFF)
@@ -14,8 +14,8 @@ find_package(OpenCV COMPONENTS core highgui imgcodecs imgproc REQUIRED)
 # Caution: due to either buggyness or horrendous design of gcc/ld/whatever, the order of
 # the libraries is important for linking: if lib A depends on stuff from lib B, lib B
 # *must* come after lib A. it does not help if lib B has already been passed previously
-find_package(FFMPEG REQUIRED COMPONENTS  avdevice  avformat swscale
-    avcodec avutil swresample)
+find_package(FFMPEG REQUIRED COMPONENTS avdevice avformat swscale
+                                        avcodec avutil swresample)
 message(STATUS "FFMPEG_LIBRARIES: ${FFMPEG_LIBRARIES}")
 message(STATUS "FFMPEG_INCLUDE_DIRS: ${FFMPEG_INCLUDE_DIRS}")
 if(WITH_SPINNAKER)
@@ -35,8 +35,7 @@ set(DECODER_SRC ${CMAKE_CURRENT_LIST_DIR}/decode_video_zmq.cpp
     ${CMAKE_CURRENT_LIST_DIR}/avreceiver.cpp)
 add_executable(encode_video_fromdir)
 target_sources(encode_video_fromdir PRIVATE ${ENCODER_SRC} ${COMMON_SRC})
-target_include_directories(encode_video_fromdir PRIVATE ${LOCAL_INCLUDE_DIRS}
-    )
+target_include_directories(encode_video_fromdir PRIVATE ${LOCAL_INCLUDE_DIRS})
 target_include_directories(encode_video_fromdir PRIVATE SYSTEM ${THIRD_PARTY_INCLUDE_DIRS})
 target_link_libraries(encode_video_fromdir ${THIRD_PARTY_LIBRARIES})
 
