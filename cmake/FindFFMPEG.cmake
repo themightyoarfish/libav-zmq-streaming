@@ -189,9 +189,10 @@ endif ()
 
 set(libdeps "m;z;lzma;bz2;vpx")
 foreach(lib IN LISTS libdeps)
-  if(${FFMPEG_FIND_REQUIRED})
-    set(IS_REQUIRED REQUIRED)
-  endif()
+  # Note that there is no REQUIRED in the following block. That is on purpose.
+  # CMake will automatically produce an error with a meaningful log message when
+  # a xxx-NOTFOUND string is used in a link dependency, as would happen when one
+  # of the libraries here is not found.
   find_library(${lib}_LIBRARY NAMES ${lib}
   PATHS
     ~/Library/Frameworks
@@ -205,15 +206,9 @@ foreach(lib IN LISTS libdeps)
     /opt/csw/lib
     /opt/lib
     /usr/freeware/lib64
-    "${FFMPEG_ROOT}/bin"
-  ${IS_REQUIRED})
-  if(${${lib}_LIBRARY_FOUND})
-    list(APPEND FFMPEG_LIBRARIES ${${lib}_LIBRARY})
-    message(STATUS "Found dependency ${${lib}_LIBRARY}")
-  else()
-    message(STATUS "Did not find dependency ${${lib}_LIBRARY}")
-    set(FFMPEG_FOUND 0)
-  endif()
+    "${FFMPEG_ROOT}/bin")
+  list(APPEND FFMPEG_LIBRARIES ${${lib}_LIBRARY})
+  message(STATUS "Dependency ${lib}_LIBRARY found? ${${lib}_LIBRARY}")
 endforeach()
 
 if (CMAKE_SYSTEM_NAME MATCHES Linux)
