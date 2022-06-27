@@ -1,5 +1,3 @@
-#include "avutils.hpp"
-#include "time_functions.hpp"
 #include <atomic>
 #include <boost/thread/sync_bounded_queue.hpp>
 #include <chrono>
@@ -7,6 +5,9 @@
 #include <iostream>
 #include <opencv2/highgui.hpp>
 #include <thread>
+
+#include "avutils.hpp"
+#include "time_functions.hpp"
 
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -21,12 +22,12 @@ using namespace std::chrono;
 
 class RTPReceiver {
 private:
-  AVFormatContext *fmt_ctx;
-  AVCodecContext *dec_ctx;
-  AVCodec *codec;
-  AVFrame *current_frame;
-  AVPacket *current_packet;
-  SwsContext *sws_ctx = nullptr;
+  AVFormatContext* fmt_ctx;
+  AVCodecContext* dec_ctx;
+  AVCodec* codec;
+  AVFrame* current_frame;
+  AVPacket* current_packet;
+  SwsContext* sws_ctx    = nullptr;
   AVPixelFormat dst_fmt_ = AV_PIX_FMT_BGRA;
   boost::sync_bounded_queue<cv::Mat> queue;
 
@@ -34,8 +35,8 @@ private:
   std::atomic<bool> pause;
   std::thread runner;
 
-  static int should_interrupt(void *opaque) {
-    return opaque != nullptr && static_cast<RTPReceiver *>(opaque)->stop.load();
+  static int should_interrupt(void* opaque) {
+    return opaque != nullptr && static_cast<RTPReceiver*>(opaque)->stop.load();
   }
 
 public:
@@ -45,7 +46,7 @@ public:
     return m;
   }
 
-  RTPReceiver(const std::string &sdp_path) : queue(5) {
+  RTPReceiver(const std::string& sdp_path) : queue(5) {
     stop.store(false);
     pause.store(false);
 
@@ -62,7 +63,7 @@ public:
     // we accept 0.1s reordering delay
     fmt_ctx->max_delay = 1'000'000 / 10;
 
-    fmt_ctx->interrupt_callback.opaque = (void *)this;
+    fmt_ctx->interrupt_callback.opaque   = (void*)this;
     fmt_ctx->interrupt_callback.callback = &RTPReceiver::should_interrupt;
 
     /* open input file, and allocate format context */
@@ -71,7 +72,7 @@ public:
     }
 
     current_packet = new AVPacket;
-    codec = avcodec_find_decoder(AV_CODEC_ID_VP9);
+    codec          = avcodec_find_decoder(AV_CODEC_ID_VP9);
     if (!codec) {
       throw std::invalid_argument("Could not find decoder");
     }
@@ -79,10 +80,10 @@ public:
     dec_ctx = avcodec_alloc_context3(codec);
 
     dec_ctx->thread_count = 1;
-    dec_ctx->codec_id = AV_CODEC_ID_VP9;
-    dec_ctx->codec_type = AVMEDIA_TYPE_VIDEO;
-    dec_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
-    dec_ctx->delay = 0;
+    dec_ctx->codec_id     = AV_CODEC_ID_VP9;
+    dec_ctx->codec_type   = AVMEDIA_TYPE_VIDEO;
+    dec_ctx->pix_fmt      = AV_PIX_FMT_YUV420P;
+    dec_ctx->delay        = 0;
     /* dec_ctx->thread_type = FF_THREAD_SLICE; */
     std::cout << std::setprecision(5) << std::fixed << std::endl;
 
@@ -95,15 +96,15 @@ public:
       while (!stop.load()) {
         while (!pause.load() && av_read_frame(fmt_ctx, current_packet) >= 0) {
           auto packet_received = system_clock::now();
-          int success = avcodec_send_packet(dec_ctx, current_packet);
-          auto packet_sent = system_clock::now();
+          int success          = avcodec_send_packet(dec_ctx, current_packet);
+          auto packet_sent     = system_clock::now();
           av_packet_unref(current_packet);
           if (success != 0) {
             std::cout << "Could not send packet: "
                       << avutils::av_strerror2(success) << std::endl;
             continue;
           }
-          success = avcodec_receive_frame(dec_ctx, current_frame);
+          success             = avcodec_receive_frame(dec_ctx, current_frame);
           auto frame_received = system_clock::now();
           if (success == 0) {
             if (!sws_ctx) {
@@ -114,10 +115,10 @@ public:
                                  NULL, NULL, NULL);
             }
 
-            AVFrame *rgb_frame = av_frame_alloc();
-            rgb_frame->width = current_frame->width;
-            rgb_frame->height = current_frame->height;
-            rgb_frame->format = dst_fmt_;
+            AVFrame* rgb_frame     = av_frame_alloc();
+            rgb_frame->width       = current_frame->width;
+            rgb_frame->height      = current_frame->height;
+            rgb_frame->format      = dst_fmt_;
             rgb_frame->linesize[0] = rgb_frame->width * 4;
             rgb_frame->data[0] =
                 new uint8_t[rgb_frame->width * rgb_frame->height * 4 + 16];
@@ -130,9 +131,9 @@ public:
                 static_cast<size_t>(rgb_frame->linesize[0])};
             cv::Mat image(sizes, CV_8UC4, rgb_frame->data[0], &steps[0]);
             auto image_created = system_clock::now();
-            stamp_image(image, packet_received, 0.2);
-            stamp_image(image, packet_sent, 0.4);
-            stamp_image(image, image_created, 0.6);
+            // stamp_image(image, packet_received, 0.2);
+            // stamp_image(image, packet_sent, 0.4);
+            // stamp_image(image, image_created, 0.6);
             queue.push_back(image.clone());
             std::cout << "Packet received: "
                       << format_timepoint_iso8601(packet_received) << std::endl;
@@ -155,9 +156,15 @@ public:
     });
   }
 
-  void setStop() { stop.store(true); }
-  void setPause() { pause.store(true); }
-  void setUnPause() { pause.store(false); }
+  void setStop() {
+    stop.store(true);
+  }
+  void setPause() {
+    pause.store(true);
+  }
+  void setUnPause() {
+    pause.store(false);
+  }
 
   ~RTPReceiver() {
     pause.store(true);
@@ -171,14 +178,14 @@ public:
   }
 };
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   /* av_log_set_level(AV_LOG_TRACE); */
   RTPReceiver receiver(argc > 1 ? argv[1] : "test.sdp");
   while (true) {
     cv::Mat image = receiver.get();
     if (!image.empty()) {
       auto image_displayed = system_clock::now();
-      stamp_image(image, image_displayed, 0.8);
+      // stamp_image(image, image_displayed, 0.8);
       std::cout << "Image display started: "
                 << format_timepoint_iso8601(image_displayed) << std::endl;
       cv::imshow("", image);
