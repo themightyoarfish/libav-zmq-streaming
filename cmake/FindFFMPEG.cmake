@@ -212,8 +212,8 @@ foreach(lib IN LISTS libdeps)
 endforeach()
 
 if (CMAKE_SYSTEM_NAME MATCHES Linux)
-set(libdeps_linux "X11;va;va-x11;va-drm;vdpau")
-foreach(lib IN LISTS libdeps_linux)
+  set(libdeps_linux "X11;va;va-x11;va-drm;vdpau")
+  foreach(lib IN LISTS libdeps_linux)
     find_library(${lib}_LIBRARY NAMES ${lib}
     PATHS
       ~/Library/Frameworks
@@ -231,20 +231,20 @@ foreach(lib IN LISTS libdeps_linux)
       REQUIRED)
     list(APPEND FFMPEG_LIBRARIES ${${lib}_LIBRARY})
     message(STATUS "Found dependency ${${lib}_LIBRARY}")
-endforeach()
+  endforeach()
 endif()
 
 if (CMAKE_SYSTEM_NAME MATCHES Darwin)
-    set(libdeps_osx
-        "CoreServices;CoreFoundation;AudioUnit;AudioToolbox;CoreAudio;CoreMedia;CoreVideo;VideoToolbox;iconv;Security")
-    foreach(lib IN LISTS libdeps_osx)
-      find_library(${lib}_LIBRARY NAMES ${lib}
-      PATHS
-        ~/Library/Frameworks
-        /Library/Frameworks
-        REQUIRED)
-      list(APPEND FFMPEG_LIBRARIES ${${lib}_LIBRARY})
-      message(STATUS "Found dependency ${${lib}_LIBRARY}")
+  set(libdeps_osx
+      "CoreServices;CoreFoundation;AudioUnit;AudioToolbox;CoreAudio;CoreMedia;CoreVideo;VideoToolbox;iconv;Security")
+  foreach(lib IN LISTS libdeps_osx)
+    find_library(${lib}_LIBRARY NAMES ${lib}
+    PATHS
+      ~/Library/Frameworks
+      /Library/Frameworks
+      REQUIRED)
+    list(APPEND FFMPEG_LIBRARIES ${${lib}_LIBRARY})
+    message(STATUS "Found dependency ${${lib}_LIBRARY}")
   endforeach()
 endif()
 
