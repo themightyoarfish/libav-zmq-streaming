@@ -24,7 +24,7 @@ class RTPReceiver {
 private:
   AVFormatContext* fmt_ctx;
   AVCodecContext* dec_ctx;
-  AVCodec* codec;
+  const AVCodec* codec;
   AVFrame* current_frame;
   AVPacket* current_packet;
   SwsContext* sws_ctx    = nullptr;
