@@ -1,4 +1,5 @@
 #include "avtransmitter.hpp"
+
 #include <chrono>
 #include <iomanip>
 #include <iostream>
@@ -10,13 +11,14 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 
-AVTransmitter::AVTransmitter(const std::string &host, const unsigned int port,
-                             unsigned int fps, unsigned int gop_size,
-                             unsigned int target_bitrate)
-    : fps_(fps), sdp_(""), gop_size_(gop_size),
-      target_bitrate_(target_bitrate) {
-
-  AVOutputFormat *format = av_guess_format("rtp", nullptr, nullptr);
+AVTransmitter::AVTransmitter(const std::string& host,
+                             const unsigned int port,
+                             unsigned int fps,
+                             unsigned int gop_size,
+                             unsigned int target_bitrate) :
+    fps_(fps), sdp_(""), gop_size_(gop_size), target_bitrate_(target_bitrate) {
+  AVOutputFormat* format =
+      (AVOutputFormat*)av_guess_format("rtp", nullptr, nullptr);
   if (!format) {
     throw std::runtime_error("Could not guess output format.");
   }
@@ -31,7 +33,7 @@ AVTransmitter::AVTransmitter(const std::string &host, const unsigned int port,
                              avutils::av_strerror2(success));
   }
 
-  this->out_codec = avcodec_find_encoder(AV_CODEC_ID_VP9);
+  this->out_codec = (AVCodec*)avcodec_find_encoder(AV_CODEC_ID_VP9);
   if (!this->out_codec) {
     throw std::runtime_error("Could not find encoder");
   }
@@ -51,24 +53,24 @@ AVTransmitter::AVTransmitter(const std::string &host, const unsigned int port,
   }
 }
 
-void AVTransmitter::encode_frame(const cv::Mat &image) {
+void AVTransmitter::encode_frame(const cv::Mat& image) {
   static bool first_time = true;
   if (first_time) {
     first_time = false;
-    height_ = image.rows;
-    width_ = image.cols;
-    avutils::set_codec_params(this->out_codec_ctx, width_, height_, fps_,
-                              target_bitrate_, gop_size_);
-    int success = avutils::initialize_codec_stream(this->out_stream,
-                                                   out_codec_ctx, out_codec);
+    height_    = image.rows;
+    width_     = image.cols;
+    avutils::set_codec_params(
+        this->out_codec_ctx, width_, height_, fps_, target_bitrate_, gop_size_);
+    int success = avutils::initialize_codec_stream(
+        this->out_stream, out_codec_ctx, out_codec);
     this->out_stream->time_base.num = 1;
     this->out_stream->time_base.den = fps_;
-    avio_open(&(this->ofmt_ctx->pb), this->ofmt_ctx->filename, AVIO_FLAG_WRITE);
+    avio_open(&(this->ofmt_ctx->pb), this->ofmt_ctx->url, AVIO_FLAG_WRITE);
 
     /* Write a file for VLC */
-    constexpr int buflen = 1024;
-    char buf[buflen] = {0};
-    AVFormatContext *ac[] = {this->ofmt_ctx};
+    constexpr int buflen  = 1024;
+    char buf[buflen]      = {0};
+    AVFormatContext* ac[] = {this->ofmt_ctx};
     av_sdp_create(ac, 1, buf, buflen);
     this->sdp_ = std::string(buf);
 
@@ -77,8 +79,8 @@ void AVTransmitter::encode_frame(const cv::Mat &image) {
                                   avutils::av_strerror2(success));
     }
     if (!swsctx) {
-      swsctx = avutils::initialize_sample_scaler(this->out_codec_ctx, width_,
-                                                 height_);
+      swsctx = avutils::initialize_sample_scaler(
+          this->out_codec_ctx, width_, height_);
     }
     if (!swsctx) {
       throw std::runtime_error("Could not initialize sample scaler!");
@@ -134,7 +136,8 @@ void AVTransmitter::frame_ended() {
   // 9
   // TODO: remove if h264 is not used
   /* AVPacket pkt2 = {0}; */
-  /* // not sure if just using the last frame's pts or and dts like this is wise */
+  /* // not sure if just using the last frame's pts or and dts like this is wise
+   */
   /* pkt2.dts = frame_->pts; */
   /* pkt2.pts = frame_->pts; */
   /* pkt2.data = static_cast<std::uint8_t *>(av_mallocz(5)); */
@@ -146,4 +149,6 @@ void AVTransmitter::frame_ended() {
   /*   std::cout << "Could not write AUD" << std::endl; */
   /* } */
 }
-std::string AVTransmitter::get_sdp() const { return this->sdp_; }
+std::string AVTransmitter::get_sdp() const {
+  return this->sdp_;
+}

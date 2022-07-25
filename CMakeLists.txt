@@ -12,10 +12,15 @@ message(STATUS "Boost_LIBRARIES ${Boost_LIBRARIES}")
 
 find_package(OpenCV COMPONENTS core highgui imgcodecs imgproc REQUIRED)
 
+set(FFMPEG_ROOT "~/autocrane-core/deps/")
+list(APPEND CMAKE_PREFIX_PATH FFMPEG_ROOT)
+
+message(STATUS "FFMPEG Root: ${FFMPEG_ROOT}")
+
 # Caution: due to either buggyness or horrendous design of gcc/ld/whatever, the order of
 # the libraries is important for linking: if lib A depends on stuff from lib B, lib B
 # *must* come after lib A. it does not help if lib B has already been passed previously
-find_package(FFMPEG REQUIRED COMPONENTS avdevice avformat swscale
+find_package(FFMPEG 4.4 EXACT REQUIRED COMPONENTS avdevice avformat swscale
     avcodec avutil swresample)
 message(STATUS "FFMPEG_LIBRARIES: ${FFMPEG_LIBRARIES}")
 message(STATUS "FFMPEG_INCLUDE_DIRS: ${FFMPEG_INCLUDE_DIRS}")

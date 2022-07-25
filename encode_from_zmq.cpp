@@ -1,15 +1,26 @@
 
 #include <boost/thread/sync_bounded_queue.hpp>
+#include <chrono>
+#include <csignal>
+#include <iostream>
+#include <opencv2/core.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/imgproc.hpp>
+#include <thread>
 
 #include "avtransmitter.hpp"
+#include "time_functions.hpp"
+
+using std::string;
+using namespace std::chrono;
 
 class VideoStreamMonitor {
 private:
   AVTransmitter* transmitter;
-  Timer timer;
   std::thread encoder;
   std::atomic<bool> stop;
-  typedef boost::sync_bounded_queue<SensorData*> Queue;
+  typedef boost::sync_bounded_queue<cv::Mat*> Queue;
   Queue queue;
 
   /**
@@ -27,29 +38,24 @@ private:
   bool has_printed_sdp;
 
 public:
-  VideoStreamMonitor(Agent* agent,
-                     const std::string& host,
+  VideoStreamMonitor(const std::string& host,
                      unsigned int port,
                      unsigned int fps,
                      unsigned int bitrate,
                      double output_scale_factor,
-                     bool do_zoom,
-                     const ConfigNode& config);
+                     bool do_zoom);
 
-  ~VideoStreamMonitor() final;
+  ~VideoStreamMonitor();
 
-  void observe(SensorData* data) final;
-}
+  void observe(cv::Mat* data);
+};
 
-VideoStreamMonitor::VideoStreamMonitor(Agent* agent,
-                                       const std::string& host,
+VideoStreamMonitor::VideoStreamMonitor(const std::string& host,
                                        unsigned int port,
                                        unsigned int fps,
                                        unsigned int bitrate,
                                        double output_scale_factor,
-                                       bool do_zoom,
-                                       const ConfigNode& config) :
-    SensorObserver(agent, config),
+                                       bool do_zoom) :
     transmitter(new AVTransmitter(host, port, fps, 1, bitrate)),
     queue(1),
     output_scale_factor(output_scale_factor),
@@ -59,41 +65,39 @@ VideoStreamMonitor::VideoStreamMonitor(Agent* agent,
   av_log_set_level(AV_LOG_QUIET);
   encoder = std::thread([&]() {
     while (!stop.load()) {
-      SensorData* data        = nullptr;
+      std::cout << "Running while loop in Thread" << std::endl;
+      cv::Mat* data           = nullptr;
       const auto queue_status = queue.try_pull_front(data);
       // keep the zoom_factor value in range [0.2, 1.0]
-      double zoom_factor = this->do_zoom == true
-                               ? std::min(std::max(0.2, AC_WM.zoom_factor), 1.0)
-                               : 1.0;
+      double zoom_factor =
+          this->do_zoom == true ? std::min(std::max(0.2, 0.5), 1.0) : 1.0;
       if (queue_status == boost::concurrent::queue_op_status::empty) {
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
         continue;
       }
-      const RectData* rect_data = dynamic_cast<const RectData*>(data);
-      cv::Mat image;
-      if (rect_data) {
-        const CameraData* cam_data = rect_data->asCameraDataWithDetectionBoxes(
-            /* scale */ zoom_factor);
-        image = cam_data->getImage();
-        delete cam_data;
-      } else {
-        // probably plain camera data
-        const CameraData* cam_data = static_cast<const CameraData*>(data);
-        image                      = cam_data->getImage();
-      }
-      if (this->do_zoom) {
-        image = utils::zoom(image, zoom_factor, this->output_scale_factor);
-      }
-      LOG_DEBUG(Logger::SENSOR,
-                "VideoStreamMonitor encoding data of size "
-                    << image.size << " from topic " << data->getTopic()
-                    << " at time "
-                    << utils::format_timepoint_iso8601(data->getTime())
-                    << ". Took " << timer.ToString());
+      cv::Mat image = cv::Mat::zeros(256, 512, CV_8UC1);
 
-      timer.tick();
+      if (this->do_zoom) {
+        cv::resize(image, image,
+                   cv::Size(int(image.cols * zoom_factor),
+                            int(image.rows * zoom_factor)),
+                   cv::INTER_LINEAR);
+      }
+      std::cout << "Begin encode " << std::setprecision(5) << std::fixed
+                << duration_cast<milliseconds>(
+                       system_clock::now().time_since_epoch())
+                           .count() /
+                       1000.0
+                << std::endl;
+      auto tic = current_millis();
       transmitter->encode_frame(image);
-      timer.tock();
+      std::cout << "Took " << 1000 * (current_millis() - tic) << std::endl;
+      std::cout << "Encoded at " << std::setprecision(5) << std::fixed
+                << duration_cast<milliseconds>(
+                       system_clock::now().time_since_epoch())
+                           .count() /
+                       1000.0
+                << std::endl;
 
       if (!has_printed_sdp) {
         has_printed_sdp = true;
@@ -111,10 +115,9 @@ VideoStreamMonitor::VideoStreamMonitor(Agent* agent,
           // well.
           index += 2;
         }
-        LOG_ALWAYS(Logger::SENSOR, "VideoStreamMonitor SDP file is " << sdp);
       }
 
-      data->releaseLock();
+      // data->releaseLock();
     }
   });
 }
@@ -126,9 +129,18 @@ VideoStreamMonitor::~VideoStreamMonitor() {
   delete transmitter;
 }
 
-void VideoStreamMonitor::observe(SensorData* data) {
+void VideoStreamMonitor::observe(cv::Mat* data) {
   if (!queue.full()) {
-    data->getLock();
+    // data->getLock();
     queue.push_back(data);
+  }
+}
+
+int main(int argc, char* argv[]) {
+  std::cout << "Starting main" << std::endl;
+  auto streamer =
+      new VideoStreamMonitor("localhost", 8000, 20, 100000, 1, false);
+  for (int i = 0; i > 5; i++) {
+    streamer->observe(new cv::Mat(256, 512, CV_8UC1));
   }
 }
