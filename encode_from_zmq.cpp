@@ -8,12 +8,14 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 #include <thread>
+#include <zmq.hpp>
 
 #include "avtransmitter.hpp"
 #include "time_functions.hpp"
 
 using std::string;
 using namespace std::chrono;
+
 
 class VideoStreamMonitor {
 private:
@@ -65,7 +67,6 @@ VideoStreamMonitor::VideoStreamMonitor(const std::string& host,
   av_log_set_level(AV_LOG_QUIET);
   encoder = std::thread([&]() {
     while (!stop.load()) {
-      std::cout << "Running while loop in Thread" << std::endl;
       cv::Mat* data           = nullptr;
       const auto queue_status = queue.try_pull_front(data);
       // keep the zoom_factor value in range [0.2, 1.0]
@@ -114,15 +115,17 @@ VideoStreamMonitor::VideoStreamMonitor(const std::string& host,
           // Advance index forward so the next iteration doesn't pick it up as
           // well.
           index += 2;
+          std::cout << "VideoStreamMonitor SDP file is " << sdp << std::endl;
         }
       }
-
+      std::cout << "End of while loop in Thread" << std::endl;
       // data->releaseLock();
     }
   });
 }
 
 VideoStreamMonitor::~VideoStreamMonitor() {
+  std::cout << "Deleting Monitor..." << std::endl;
   stop.store(true);
   encoder.join();
   queue.close();
@@ -137,10 +140,48 @@ void VideoStreamMonitor::observe(cv::Mat* data) {
 }
 
 int main(int argc, char* argv[]) {
+  zmq::context_t ctx;
+  zmq::socket_t recieve_socket = zmq::socket_t(ctx, zmq::socket_type::sub);
+
+  const std::string host  = "localhost";
+  int port                = 123123;
+  const std::string user  = "operator";
+  const std::string pw    = "psiori";
+  const std::string topic = "";
+
+  recieve_socket.set(zmq::sockopt::plain_username, user);
+  recieve_socket.set(zmq::sockopt::plain_password, pw);
+  const auto connect_str =
+      std::string("tcp://") + host + ":" + std::to_string(port);
+  recieve_socket.set(zmq::sockopt::subscribe, topic);
+  recieve_socket.set(zmq::sockopt::rcvhwm, 2);
+  recieve_socket.connect(connect_str);
+  std::cout << "Connected socket to " << connect_str << ", on topic: " << topic
+            << std::endl;
   std::cout << "Starting main" << std::endl;
+
   auto streamer =
       new VideoStreamMonitor("localhost", 8000, 20, 100000, 1, false);
-  for (int i = 0; i > 5; i++) {
-    streamer->observe(new cv::Mat(256, 512, CV_8UC1));
+
+  while (true) {
+    zmq::message_t topic;
+    zmq::message_t request;
+
+    //  Wait for next request from client
+    [[maybe_unused]] zmq::recv_result_t result =
+        recieve_socket.recv(topic, zmq::recv_flags::none);
+    result = recieve_socket.recv(request, zmq::recv_flags::none);
+
+    const std::string topicStr = topic.to_string();
+    std::string requestStr     = request.to_string();
+    if (topicStr.find("camera|") != std::string::npos) {
+      int64_t more = recieve_socket.get(zmq::sockopt::rcvmore);
+      uchar* ptr   = reinterpret_cast<uchar*>(request.data());
+      std::vector<uchar> data(ptr, ptr + request.size());
+      cv::Mat* image = new cv::Mat(cv::imdecode(data, -1));
+      streamer->observe(image);
+    } else {
+      streamer->observe(new cv::Mat(256, 512, CV_8UC1));
+    }
   }
 }
