@@ -141,11 +141,11 @@ void VideoStreamMonitor::observe(cv::Mat* data) {
 
 int main(int argc, char* argv[]) {
   zmq::context_t ctx;
-  zmq::socket_t recieve_socket = zmq::socket_t(ctx, zmq::socket_type::sub);
+  zmq::socket_t recieve_socket(ctx, zmq::socket_type::sub);
 
-  const std::string host  = "localhost";
+  const std::string host  = "127.0.0.1";
   int port                = 123123;
-  const std::string user  = "operator";
+  const std::string user  = "developer";
   const std::string pw    = "psiori";
   const std::string topic = "";
 
@@ -153,9 +153,10 @@ int main(int argc, char* argv[]) {
   recieve_socket.set(zmq::sockopt::plain_password, pw);
   const auto connect_str =
       std::string("tcp://") + host + ":" + std::to_string(port);
-  recieve_socket.set(zmq::sockopt::subscribe, topic);
-  recieve_socket.set(zmq::sockopt::rcvhwm, 2);
   recieve_socket.connect(connect_str);
+  recieve_socket.set(zmq::sockopt::subscribe, topic);
+  // recieve_socket.set(zmq::sockopt::rcvhwm, 2);
+
   std::cout << "Connected socket to " << connect_str << ", on topic: " << topic
             << std::endl;
   std::cout << "Starting main" << std::endl;
@@ -163,15 +164,15 @@ int main(int argc, char* argv[]) {
   auto streamer =
       new VideoStreamMonitor("localhost", 8000, 20, 100000, 1, false);
 
+  zmq::message_t topic;
+  zmq::message_t request;
+  zmq::recv_result_t result;
   while (true) {
-    zmq::message_t topic;
-    zmq::message_t request;
-
-    //  Wait for next request from client
-    [[maybe_unused]] zmq::recv_result_t result =
-        recieve_socket.recv(topic, zmq::recv_flags::none);
+    std::cout << "Waiting for zmq message" << std::endl;
+    result = recieve_socket.recv(topic, zmq::recv_flags::none);
+    std::cout << "Got topic, waiting for zmq result" << std::endl;
     result = recieve_socket.recv(request, zmq::recv_flags::none);
-
+    std::cout << "Received zmq message" << std::endl;
     const std::string topicStr = topic.to_string();
     std::string requestStr     = request.to_string();
     if (topicStr.find("camera|") != std::string::npos) {
