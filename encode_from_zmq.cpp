@@ -164,16 +164,16 @@ int main(int argc, char* argv[]) {
   auto streamer =
       new VideoStreamMonitor("localhost", 8000, 20, 100000, 1, false);
 
-  zmq::message_t topic;
+  zmq::message_t recv_topic;
   zmq::message_t request;
   zmq::recv_result_t result;
   while (true) {
     std::cout << "Waiting for zmq message" << std::endl;
-    result = recieve_socket.recv(topic, zmq::recv_flags::none);
+    result = recieve_socket.recv(recv_topic, zmq::recv_flags::none);
     std::cout << "Got topic, waiting for zmq result" << std::endl;
     result = recieve_socket.recv(request, zmq::recv_flags::none);
     std::cout << "Received zmq message" << std::endl;
-    const std::string topicStr = topic.to_string();
+    const std::string topicStr = recv_topic.to_string();
     std::string requestStr     = request.to_string();
     if (topicStr.find("camera|") != std::string::npos) {
       int64_t more = recieve_socket.get(zmq::sockopt::rcvmore);
