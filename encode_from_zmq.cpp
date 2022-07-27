@@ -140,8 +140,8 @@ void VideoStreamMonitor::observe(cv::Mat* data) {
 }
 
 int main(int argc, char* argv[]) {
-  zmq::context_t ctx;
-  zmq::socket_t recieve_socket(ctx, zmq::socket_type::sub);
+  zmq::context_t ctx(1);
+  zmq::socket_t socket(ctx, ZMQ_SUB);
 
   const std::string host  = "127.0.0.1";
   int port                = 123123;
@@ -149,14 +149,13 @@ int main(int argc, char* argv[]) {
   const std::string pw    = "psiori";
   const std::string topic = "";
 
-  recieve_socket.set(zmq::sockopt::plain_username, user);
-  recieve_socket.set(zmq::sockopt::plain_password, pw);
+  socket.set(zmq::sockopt::plain_username, user);
+  socket.set(zmq::sockopt::plain_password, pw);
+  socket.set(zmq::sockopt::rcvhwm, 2);
+  socket.set(zmq::sockopt::subscribe, topic);
   const auto connect_str =
       std::string("tcp://") + host + ":" + std::to_string(port);
-  recieve_socket.connect(connect_str);
-  recieve_socket.set(zmq::sockopt::subscribe, topic);
-  // recieve_socket.set(zmq::sockopt::rcvhwm, 2);
-
+  socket.connect(connect_str);
   std::cout << "Connected socket to " << connect_str << ", on topic: " << topic
             << std::endl;
   std::cout << "Starting main" << std::endl;
@@ -169,18 +168,20 @@ int main(int argc, char* argv[]) {
   zmq::recv_result_t result;
   while (true) {
     std::cout << "Waiting for zmq message" << std::endl;
-    result = recieve_socket.recv(recv_topic, zmq::recv_flags::none);
+    result = socket.recv(recv_topic, zmq::recv_flags::none);
     std::cout << "Got topic, waiting for zmq result" << std::endl;
-    result = recieve_socket.recv(request, zmq::recv_flags::none);
-    std::cout << "Received zmq message" << std::endl;
+    result                     = socket.recv(request, zmq::recv_flags::none);
     const std::string topicStr = recv_topic.to_string();
-    std::string requestStr     = request.to_string();
+    std::cout << "Received zmq message on topic " << topicStr << std::endl;
+    std::string requestStr = request.to_string();
     if (topicStr.find("camera|") != std::string::npos) {
-      int64_t more = recieve_socket.get(zmq::sockopt::rcvmore);
+      int64_t more = socket.get(zmq::sockopt::rcvmore);
       uchar* ptr   = reinterpret_cast<uchar*>(request.data());
       std::vector<uchar> data(ptr, ptr + request.size());
-      cv::Mat* image = new cv::Mat(cv::imdecode(data, -1));
-      streamer->observe(image);
+      std::cout << "Starting to decode image" << std::endl;
+      cv::Mat image = cv::imdecode(data, -1);
+      std::cout << "Decoded image" << std::endl;
+      streamer->observe(new cv::Mat(image.clone()));
     } else {
       streamer->observe(new cv::Mat(256, 512, CV_8UC1));
     }
