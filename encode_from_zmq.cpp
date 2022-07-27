@@ -16,13 +16,12 @@
 using std::string;
 using namespace std::chrono;
 
-
 class VideoStreamMonitor {
 private:
   AVTransmitter* transmitter;
   std::thread encoder;
   std::atomic<bool> stop;
-  typedef boost::sync_bounded_queue<cv::Mat*> Queue;
+  typedef boost::sync_bounded_queue<cv::Mat> Queue;
   Queue queue;
 
   /**
@@ -49,7 +48,7 @@ public:
 
   ~VideoStreamMonitor();
 
-  void observe(cv::Mat* data);
+  void process(cv::Mat data);
 };
 
 VideoStreamMonitor::VideoStreamMonitor(const std::string& host,
@@ -67,16 +66,15 @@ VideoStreamMonitor::VideoStreamMonitor(const std::string& host,
   av_log_set_level(AV_LOG_QUIET);
   encoder = std::thread([&]() {
     while (!stop.load()) {
-      cv::Mat* data           = nullptr;
-      const auto queue_status = queue.try_pull_front(data);
-      // keep the zoom_factor value in range [0.2, 1.0]
+      // const auto queue_status = queue.try_pull_front(image);
+      //  keep the zoom_factor value in range [0.2, 1.0]
+      cv::Mat image = queue.pull_front();
       double zoom_factor =
           this->do_zoom == true ? std::min(std::max(0.2, 0.5), 1.0) : 1.0;
-      if (queue_status == boost::concurrent::queue_op_status::empty) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(5));
-        continue;
-      }
-      cv::Mat image = cv::Mat::zeros(256, 512, CV_8UC1);
+      // if (queue_status == boost::concurrent::queue_op_status::empty) {
+      //   std::this_thread::sleep_for(std::chrono::milliseconds(5));
+      //   continue;
+      // }
 
       if (this->do_zoom) {
         cv::resize(image, image,
@@ -118,7 +116,6 @@ VideoStreamMonitor::VideoStreamMonitor(const std::string& host,
           std::cout << "VideoStreamMonitor SDP file is " << sdp << std::endl;
         }
       }
-      std::cout << "End of while loop in Thread" << std::endl;
       // data->releaseLock();
     }
   });
@@ -132,7 +129,7 @@ VideoStreamMonitor::~VideoStreamMonitor() {
   delete transmitter;
 }
 
-void VideoStreamMonitor::observe(cv::Mat* data) {
+void VideoStreamMonitor::process(cv::Mat data) {
   if (!queue.full()) {
     // data->getLock();
     queue.push_back(data);
@@ -161,7 +158,7 @@ int main(int argc, char* argv[]) {
   std::cout << "Starting main" << std::endl;
 
   auto streamer =
-      new VideoStreamMonitor("localhost", 8000, 20, 100000, 1, false);
+      new VideoStreamMonitor("127.0.0.1", 8000, 20, 100000, 1, false);
 
   zmq::message_t recv_topic;
   zmq::message_t request;
@@ -178,12 +175,10 @@ int main(int argc, char* argv[]) {
       int64_t more = socket.get(zmq::sockopt::rcvmore);
       uchar* ptr   = reinterpret_cast<uchar*>(request.data());
       std::vector<uchar> data(ptr, ptr + request.size());
-      std::cout << "Starting to decode image" << std::endl;
       cv::Mat image = cv::imdecode(data, -1);
-      std::cout << "Decoded image" << std::endl;
-      streamer->observe(new cv::Mat(image.clone()));
+      streamer->process(image);
     } else {
-      streamer->observe(new cv::Mat(256, 512, CV_8UC1));
+      streamer->process(cv::Mat(256, 512, CV_8UC1));
     }
   }
 }
