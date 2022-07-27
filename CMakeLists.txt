@@ -2,28 +2,32 @@ project(zmq-streaming C CXX)
 cmake_minimum_required(VERSION 3.15)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
+set(AUTOCRANE_DEPS "~/Development/autocrane-core/deps/")
 LIST(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_LIST_DIR})
 add_compile_options(-fno-lto)
-
 option(WITH_SPINNAKER "Use spinnaker?" OFF)
 
-list(INSERT CMAKE_PREFIX_PATH 0 "~/Development/autocrane-core/deps/")
+# To fix OpenMP not found -> use brews llvm clang, not Apple Clang.
+# Taken from https://stackoverflow.com/a/53889826
+cmake_policy(GET CMP0025 InfoCompile)
+message(STATUS "CMP0025 ${InfoCompile}")
 
-# find_package(OpenMP REQUIRED)
-# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -DWITH_OPENMP")
-# message(STATUS "OpenMP: ${OpenMP_CXX_LIBRARIES} ${OpenMP_INCLUDE_DIRS}")
+list(INSERT CMAKE_PREFIX_PATH 0 ${AUTOCRANE_DEPS})
+set(Boost_ROOT ${AUTOCRANE_DEPS})
 find_package(Boost COMPONENTS thread REQUIRED PATHS)
-message(STATUS "Boost_LIBRARIES ${Boost_LIBRARIES}")
-
+message(STATUS " Boost_INCLUDE_DIRS: ${Boost_INCLUDE_DIRS} ")
+message(STATUS " Boost_LIBRARIES ${Boost_LIBRARIES} ")
+set(OpenCV_ROOT ${AUTOCRANE_DEPS})
 find_package(OpenCV COMPONENTS core highgui imgcodecs imgproc REQUIRED)
 
 # Caution: due to either buggyness or horrendous design of gcc/ld/whatever, the order of
 # the libraries is important for linking: if lib A depends on stuff from lib B, lib B
 # *must* come after lib A. it does not help if lib B has already been passed previously
+set(FFMPEG_ROOT ${AUTOCRANE_DEPS})
 find_package(FFMPEG 4.4 EXACT REQUIRED COMPONENTS avdevice avformat swscale
     avcodec avutil swresample)
-message(STATUS "FFMPEG_LIBRARIES: ${FFMPEG_LIBRARIES}")
-message(STATUS "FFMPEG_INCLUDE_DIRS: ${FFMPEG_INCLUDE_DIRS}")
+message(STATUS " FFMPEG_LIBRARIES: ${FFMPEG_LIBRARIES} ")
+message(STATUS " FFMPEG_INCLUDE_DIRS: ${FFMPEG_INCLUDE_DIRS} ")
 
 if(WITH_SPINNAKER)
     find_package(Spinnaker 1.24.0.60)
@@ -31,9 +35,12 @@ endif()
 
 find_package(cppzmq REQUIRED)
 
-# set(tclap_ROOT "/usr/local/Cellar/tclap/1.2.5/include")
-# find_package(tclap REQUIRED PATHS "/usr/local/Cellar/tclap/1.2.5/include")
-# message(STATUS "tclap headers at ${tclap_INCLUDE_DIR}")
+# find_package(OpenMP REQUIRED)
+# set(CMAKE_CXX_FLAGS " ${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -DWITH_OPENMP ")
+# message(STATUS " OpenMP: ${OpenMP_CXX_LIBRARIES} ${OpenMP_INCLUDE_DIRS} ")
+# set(tclap_ROOT " /usr/local/Cellar/tclap/1.2.5/include ")
+# find_package(tclap REQUIRED PATHS " /usr/local/Cellar/tclap/1.2.5/include ")
+# message(STATUS " tclap headers at ${tclap_INCLUDE_DIR} ")
 set(cppzmq_LIBRARIES cppzmq)
 set(LOCAL_INCLUDE_DIRS ${CMAKE_CURRENT_LIST_DIR})
 set(THIRD_PARTY_INCLUDE_DIRS ${BOOST_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS} ${cppzmq_INCLUDE_DIRS}
