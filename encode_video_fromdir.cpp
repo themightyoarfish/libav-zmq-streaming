@@ -23,15 +23,17 @@ int main(int argc, char *argv[]) {
   std::string ext;
   std::string rtp_rcv_host;
   unsigned int rtp_rcv_port;
+  bool loop;
 
-  if (argc > 3) {
+  if (argc > 4) {
     directory = argv[1];
     ext = argv[2];
     rtp_rcv_host = argv[3];
     rtp_rcv_port = std::atoi(argv[4]);
+    loop = std::string(argv[5]) == std::string("true");
   } else {
-    std::cout << "Usage: " << argv[0] << " <directory> <ext> <host> <port>"
-              << std::endl;
+    std::cout << "Usage: " << argv[0]
+              << " <directory> <ext> <host> <port> <true/false>" << std::endl;
     return 1;
   }
   constexpr int fps = 30;
@@ -42,9 +44,10 @@ int main(int argc, char *argv[]) {
   std::cout << "Globbing: " << glob_expr << std::endl;
   vector<string> filenames;
   cv::glob(glob_expr, filenames);
-  std::cout << "Found " << filenames.size() << " images" << std::endl;
+  std::cout << "Found " << filenames.size()
+            << " images (will read all before encoding)" << std::endl;
   sort(filenames.begin(), filenames.end());
-  const int n_frames = 200; // filenames.size();
+  const int n_frames = filenames.size();
 
   vector<cv::Mat> images;
   for (int i = 0; i < n_frames; ++i) {
@@ -58,9 +61,15 @@ int main(int argc, char *argv[]) {
   std::cout << std::setprecision(5) << std::fixed;
   int ms = 0;
   const auto begin = chrono::system_clock::now();
-  for (int i = 0; i < n_frames; ++i) {
+  int n_runs = 0;
+  for (int i = 0; i < n_frames || loop; ++i) {
+    if (i == n_frames) {
+      ++n_runs;
+      i = 0;
+    }
     auto tic = chrono::system_clock::now();
-    auto desired_end_time = begin + milliseconds(budget_ms * (i + 1));
+    auto desired_end_time =
+        begin + milliseconds(budget_ms * (i + 1 + (n_frames * n_runs)));
     cv::Mat &image = images[i];
     if (put_text) {
       stamp_image(image, tic, 0.1);
@@ -96,7 +105,7 @@ int main(int argc, char *argv[]) {
       const auto elapsed_total =
           chrono::duration_cast<chrono::milliseconds>(toc2 - tic).count();
       ms += elapsed_total;
-      cout << "fps = " << (i + 1) * 1000.0 / ms << endl;
+      cout << "fps = " << (i + 1 + (n_runs * n_frames)) * 1000.0 / ms << endl;
     }
   }
   return 0;
