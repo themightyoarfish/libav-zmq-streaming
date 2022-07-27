@@ -9,6 +9,9 @@ option(WITH_SPINNAKER "Use spinnaker?" OFF)
 
 list(INSERT CMAKE_PREFIX_PATH 0 "~/Development/autocrane-core/deps/")
 
+# find_package(OpenMP REQUIRED)
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -DWITH_OPENMP")
+# message(STATUS "OpenMP: ${OpenMP_CXX_LIBRARIES} ${OpenMP_INCLUDE_DIRS}")
 find_package(Boost COMPONENTS thread REQUIRED PATHS)
 message(STATUS "Boost_LIBRARIES ${Boost_LIBRARIES}")
 
@@ -27,6 +30,10 @@ if(WITH_SPINNAKER)
 endif()
 
 find_package(cppzmq REQUIRED)
+
+# set(tclap_ROOT "/usr/local/Cellar/tclap/1.2.5/include")
+# find_package(tclap REQUIRED PATHS "/usr/local/Cellar/tclap/1.2.5/include")
+# message(STATUS "tclap headers at ${tclap_INCLUDE_DIR}")
 set(cppzmq_LIBRARIES cppzmq)
 set(LOCAL_INCLUDE_DIRS ${CMAKE_CURRENT_LIST_DIR})
 set(THIRD_PARTY_INCLUDE_DIRS ${BOOST_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS} ${cppzmq_INCLUDE_DIRS}
