@@ -116,7 +116,7 @@ unintentional buffering and delays.
 Example usage is
 
 ```
-./build/encode_from_zmq --host 192.168.101.10 --port 6021 --reciever 192.168.19.202 --stream-port 8000
+./build/encode_from_zmq --host 192.168.101.10 --port 6001 --reciever 192.168.19.202 --stream-port 8000
 ```
 
 ```
@@ -129,7 +129,6 @@ USAGE:
                       string>] [-u <user as string>] [--port <Port as
                       Integer>] [-H <Host as String>] [--] [--version]
                       [-h]
-
 
 Where: 
 
