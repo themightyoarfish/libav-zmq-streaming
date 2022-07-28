@@ -164,7 +164,7 @@ int main(int argc, char* argv[]) {
   ValueArg<float> rtp_zoom_factor("", "zoom-factor", "zoom-factor of stream",
                                   false, 1, "zoom-factor as Float", cmdline);
   SwitchArg rtp_do_zoom("z", "zoom", "Enable Zoom.", cmdline, false);
-
+  cmdline.parse(argc, argv);
   zmq::context_t ctx(1);
   zmq::socket_t socket(ctx, ZMQ_SUB);
 
