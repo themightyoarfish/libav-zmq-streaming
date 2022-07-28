@@ -62,7 +62,7 @@ int main(int argc, char *argv[]) {
   int ms = 0;
   const auto begin = chrono::system_clock::now();
   int n_runs = 0;
-  for (int i = 0; i < n_frames || loop; ++i) {
+  for (int i = 0; i < n_frames || loop; ++i) {
     if (i == n_frames) {
       ++n_runs;
       i = 0;
