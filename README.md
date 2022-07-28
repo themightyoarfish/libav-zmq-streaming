@@ -21,6 +21,7 @@ Beware that **an even-numbered RTP port** is necessary otherwise VLC will not re
 packets. This is because the live555 library VLC used discards the last bit of the port
 number, so the port gets changed when odd (wtf).
 
+`encode_from_zmq` receives images via zmq and sends it to an rtp host and port. Check [below](#Encode-From-ZMQ) for details. 
 
 # Streaming to VLC
 
@@ -109,3 +110,71 @@ for this was tolerable for high resolution images, with some artifacts and janki
 but might be improved with smaller image size. Special consideration must be taken with
 setting `conflate`, `sendhwm` and `recvhwm` options in senders/receivers to avoid
 unintentional buffering and delays.
+
+# Encode From ZMQ
+
+Example usage is
+
+```
+./build/encode_from_zmq --host 192.168.101.10 --port 6021 --reciever 192.168.19.202 --stream-port 8000
+```
+
+```
+USAGE: 
+
+   ./encode_from_zmq  [-z] [--zoom-factor <zoom-factor as Float>] [-b
+                      <Bitrate as Integer>] [-f <fps as Integer>]
+                      [--stream-port <Port as Integer>] [-R <Reciever as
+                      String>] [-t <topic as string>] [-p <password as
+                      string>] [-u <user as string>] [--port <Port as
+                      Integer>] [-H <Host as String>] [--] [--version]
+                      [-h]
+
+
+Where: 
+
+   -z,  --zoom
+     Enable Zoom.
+
+   --zoom-factor <zoom-factor as Float>
+     zoom-factor of stream
+
+   -b <Bitrate as Integer>,  --bitrate <Bitrate as Integer>
+     bitrate of stream
+
+   -f <fps as Integer>,  --fps <fps as Integer>
+     fps of stream
+
+   --stream-port <Port as Integer>
+     port of stream
+
+   -R <Reciever as String>,  --reciever <Reciever as String>
+     reciever of the rtp stream
+
+   -t <topic as string>,  --topic <topic as string>
+     topic to filter zmq messages
+
+   -p <password as string>,  --password <password as string>
+     password to authenticate at zmq
+
+   -u <user as string>,  --user <user as string>
+     user to authenticate at zmq
+
+   --port <Port as Integer>
+     port of incoming zmq messages
+
+   -H <Host as String>,  --host <Host as String>
+     host of incoming zmq messages
+
+   --,  --ignore_rest
+     Ignores the rest of the labeled arguments following this flag.
+
+   --version
+     Displays version information and exits.
+
+   -h,  --help
+     Displays usage information and exits.
+
+
+   Recieve zmq from code, send via RTP
+```
