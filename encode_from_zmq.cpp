@@ -139,7 +139,7 @@ void VideoStreamMonitor::process(cv::Mat data) {
 }
 
 int main(int argc, char* argv[]) {
-  CmdLine cmdline("Recieve zmq from code, send via RTP");
+  CmdLine cmdline("Recieve zmq (from KAI-core), send via RTP");
 
   ValueArg<string> zmq_host("H", "host", "host of incoming zmq messages", false,
                             "127.0.0.1", "Host as String", cmdline);
