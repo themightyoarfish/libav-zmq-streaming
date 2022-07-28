@@ -142,7 +142,7 @@ int main(int argc, char* argv[]) {
   CmdLine cmdline("Recieve zmq from code, send via RTP");
 
   ValueArg<string> zmq_host("H", "host", "host of incoming zmq messages", false,
-                            "localhohst", "Host as String", cmdline);
+                            "127.0.0.1", "Host as String", cmdline);
 
   ValueArg<int> zmq_port("", "port", "port of incoming zmq messages", false,
                          6001, "Port as Integer", cmdline);
@@ -154,7 +154,7 @@ int main(int argc, char* argv[]) {
                              false, "", "topic as string", cmdline);
 
   ValueArg<string> rtp_host("R", "reciever", "reciever of the rtp stream",
-                            false, "localhost", "Reciever as String", cmdline);
+                            false, "127.0.0.1", "Reciever as String", cmdline);
   ValueArg<int> rtp_port("", "stream-port", "port of stream", false, 8000,
                          "Port as Integer", cmdline);
   ValueArg<int> rtp_fps(
