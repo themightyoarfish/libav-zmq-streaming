@@ -123,7 +123,7 @@ public:
             /*     new uint8_t[rgb_frame->width * rgb_frame->height * 4 + 16];
              */
             av_image_alloc(rgb_frame->data, rgb_frame->linesize,
-                                 rgb_frame->width, rgb_frame->height, dst_fmt_, 16);
+                           rgb_frame->width, rgb_frame->height, dst_fmt_, 16);
 
             int slice_h = sws_scale(
                 sws_ctx, current_frame->data, current_frame->linesize, 0,
@@ -178,6 +178,8 @@ public:
 int main(int argc, char **argv) {
   /* av_log_set_level(AV_LOG_TRACE); */
   RTPReceiver receiver(argc > 1 ? argv[1] : "test.sdp");
+  const std::string win_name = "Stream";
+  cv::namedWindow(win_name, cv::WindowFlags::WINDOW_NORMAL);
   while (true) {
     cv::Mat image = receiver.get();
     if (!image.empty()) {
@@ -185,7 +187,7 @@ int main(int argc, char **argv) {
       /* stamp_image(image, image_displayed, 0.8); */
       std::cout << "Image display started: "
                 << format_timepoint_iso8601(image_displayed) << std::endl;
-      cv::imshow("", image);
+      cv::imshow(win_name, image);
       std::cout << "Image displayed: "
                 << format_timepoint_iso8601(system_clock::now()) << std::endl;
       cv::waitKey(1);
