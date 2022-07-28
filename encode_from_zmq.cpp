@@ -16,6 +16,7 @@
 
 using std::string;
 using namespace std::chrono;
+using namespace TCLAP;
 
 class VideoStreamMonitor {
 private:
@@ -40,7 +41,7 @@ private:
   bool has_printed_sdp;
 
 public:
-  VideoStreamMonitor(const std::string& host,
+  VideoStreamMonitor(const string& host,
                      unsigned int port,
                      unsigned int fps,
                      unsigned int bitrate,
@@ -52,7 +53,7 @@ public:
   void process(cv::Mat data);
 };
 
-VideoStreamMonitor::VideoStreamMonitor(const std::string& host,
+VideoStreamMonitor::VideoStreamMonitor(const string& host,
                                        unsigned int port,
                                        unsigned int fps,
                                        unsigned int bitrate,
@@ -101,12 +102,12 @@ VideoStreamMonitor::VideoStreamMonitor(const std::string& host,
 
       if (!has_printed_sdp) {
         has_printed_sdp = true;
-        std::string sdp = transmitter->get_sdp();
+        string sdp      = transmitter->get_sdp();
         size_t index    = 0;
         while (true) {
           // Locate the substring to replace.
           index = sdp.find("\r\n", index);
-          if (index == std::string::npos) {
+          if (index == string::npos) {
             break;
           }
           // Make the replacement.
@@ -138,28 +139,55 @@ void VideoStreamMonitor::process(cv::Mat data) {
 }
 
 int main(int argc, char* argv[]) {
+  CmdLine cmdline("Recieve zmq from code, send via RTP");
+
+  ValueArg<string> zmq_host("H", "host", "host of incoming zmq messages", false,
+                            "localhohst", "Host as String", cmdline);
+
+  ValueArg<int> zmq_port("P", "port", "port of incoming zmq messages", false,
+                         6001, "Port as Integer", cmdline);
+  ValueArg<string> zmq_user("u", "user", "user to authenticate at zmq", false,
+                            "developer", "user as string", cmdline);
+  ValueArg<string> zmq_pw("p", "password", "password to authenticate at zmq",
+                          false, "psiori", "password as string", cmdline);
+  ValueArg<string> zmq_topic("t", "topic", "topic to filter zmq messages",
+                             false, "", "topic as string", cmdline);
+
+  ValueArg<string> rtp_host("R", "reciever", "reciever of the rtp stream",
+                            false, "localhost", "Reciever as String", cmdline);
+  ValueArg<int> rtp_port("p", "stream-port", "port of stream", false, 8000,
+                         "Port as Integer", cmdline);
+  ValueArg<int> rtp_fps(
+      "f", "fps", "fps of stream", false, 20, "fps as Integer", cmdline);
+  ValueArg<long> rtp_bitrate("b", "bitrate", "bitrate of stream", false, 100000,
+                             "Bitrate as Integer", cmdline);
+  ValueArg<float> rtp_zoom_factor("", "zoom-factor", "zoom-factor of stream",
+                                  false, 1, "zoom-factor as Float", cmdline);
+  SwitchArg rtp_do_zoom("z", "zoom", "Enable Zoom.", cmdline, false);
+
   zmq::context_t ctx(1);
   zmq::socket_t socket(ctx, ZMQ_SUB);
 
-  const std::string host  = "127.0.0.1";
-  int port                = 123123;
-  const std::string user  = "developer";
-  const std::string pw    = "psiori";
-  const std::string topic = "";
+  const string host  = zmq_host.getValue();
+  int port           = zmq_port.getValue();
+  const string user  = zmq_user.getValue();
+  const string pw    = zmq_pw.getValue();
+  const string topic = zmq_topic.getValue();
 
   socket.set(zmq::sockopt::plain_username, user);
   socket.set(zmq::sockopt::plain_password, pw);
   socket.set(zmq::sockopt::rcvhwm, 2);
   socket.set(zmq::sockopt::subscribe, topic);
-  const auto connect_str =
-      std::string("tcp://") + host + ":" + std::to_string(port);
+  const auto connect_str = string("tcp://") + host + ":" + std::to_string(port);
   socket.connect(connect_str);
   std::cout << "Connected socket to " << connect_str << ", on topic: " << topic
             << std::endl;
   std::cout << "Starting main" << std::endl;
 
-  auto streamer =
-      new VideoStreamMonitor("127.0.0.1", 8000, 20, 100000, 1, false);
+  auto streamer = new VideoStreamMonitor(
+      rtp_host.getValue(), rtp_port.getValue(), rtp_fps.getValue(),
+      rtp_bitrate.getValue(), rtp_zoom_factor.getValue(),
+      rtp_do_zoom.getValue());
 
   zmq::message_t recv_topic;
   zmq::message_t request;
@@ -168,11 +196,11 @@ int main(int argc, char* argv[]) {
     std::cout << "Waiting for zmq message" << std::endl;
     result = socket.recv(recv_topic, zmq::recv_flags::none);
     std::cout << "Got topic, waiting for zmq result" << std::endl;
-    result                     = socket.recv(request, zmq::recv_flags::none);
-    const std::string topicStr = recv_topic.to_string();
+    result                = socket.recv(request, zmq::recv_flags::none);
+    const string topicStr = recv_topic.to_string();
     std::cout << "Received zmq message on topic " << topicStr << std::endl;
-    std::string requestStr = request.to_string();
-    if (topicStr.find("camera|") != std::string::npos) {
+    string requestStr = request.to_string();
+    if (topicStr.find("camera|") != string::npos) {
       int64_t more = socket.get(zmq::sockopt::rcvmore);
       uchar* ptr   = reinterpret_cast<uchar*>(request.data());
       std::vector<uchar> data(ptr, ptr + request.size());
