@@ -66,6 +66,7 @@ VideoStreamMonitor::VideoStreamMonitor(const string& host,
     has_printed_sdp(false) {
   stop.store(false);
   av_log_set_level(AV_LOG_QUIET);
+  std::cout << "Streaming to " << host << ":" << port << std::endl;
   encoder = std::thread([&]() {
     while (!stop.load()) {
       // const auto queue_status = queue.try_pull_front(image);
@@ -180,8 +181,8 @@ int main(int argc, char* argv[]) {
   socket.set(zmq::sockopt::subscribe, topic);
   const auto connect_str = string("tcp://") + host + ":" + std::to_string(port);
   socket.connect(connect_str);
-  std::cout << "Connected socket to " << connect_str << ", on topic: " << topic
-            << std::endl;
+  std::cout << "Connected zmq socket to " << connect_str
+            << ", on topic: " << topic << std::endl;
   std::cout << "Starting main" << std::endl;
 
   auto streamer = new VideoStreamMonitor(
@@ -206,8 +207,6 @@ int main(int argc, char* argv[]) {
       std::vector<uchar> data(ptr, ptr + request.size());
       cv::Mat image = cv::imdecode(data, -1);
       streamer->process(image);
-    } else {
-      streamer->process(cv::Mat(256, 512, CV_8UC1));
     }
   }
 }
