@@ -127,6 +127,7 @@ void AVReceiver::receive() {
               std::vector<size_t> steps{
                   static_cast<size_t>(frame->linesize[0])};
 
+              // manual conversion of YUV data to rgb8
               const auto height = frame->height;
               const auto width = frame->width;
               const auto actual_size = cv::Size(width, height);

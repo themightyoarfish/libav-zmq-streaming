@@ -76,7 +76,7 @@ int initialize_codec_stream(AVStream *&stream, AVCodecContext *&codec_ctx,
 
   bool all_found = true;
   AVDictionaryEntry *e = nullptr;
-  while (e = av_dict_get(codec_options, "", e, AV_DICT_IGNORE_SUFFIX)) {
+  while ((e = av_dict_get(codec_options, "", e, AV_DICT_IGNORE_SUFFIX))) {
     /* std::cout << "Did not find option " << e->key << ": " << e->value */
     /*           << std::endl; */
     all_found = false;
@@ -100,15 +100,16 @@ SwsContext *initialize_sample_scaler(AVCodecContext *codec_ctx, double width,
 AVFrame *allocate_frame_buffer(AVCodecContext *codec_ctx, double width,
                                double height) {
   AVFrame *frame = av_frame_alloc();
-
-  std::uint8_t *framebuf = new uint8_t[av_image_get_buffer_size(
-      codec_ctx->pix_fmt, width, height, 1)];
-  av_image_fill_arrays(frame->data, frame->linesize, framebuf,
-                       codec_ctx->pix_fmt, width, height, 1);
   frame->width = width;
   frame->height = height;
+
   frame->format = static_cast<int>(codec_ctx->pix_fmt);
   frame->pts = 0;
+
+  // TODO: i changed this without testing, does it still work?
+  // Memory leak danger: frame->data pointers must be deleted with av_freep()
+  av_image_alloc(frame->data, frame->linesize, frame->width, frame->height,
+                 codec_ctx->pix_fmt, 16);
 
   return frame;
 }
@@ -126,7 +127,8 @@ int write_frame(AVCodecContext *codec_ctx, AVFormatContext *fmt_ctx,
 
   ret = avcodec_receive_packet(codec_ctx, &pkt);
   if (ret < 0) {
-    /* std::cout << "Error receiving packet from codec context!" << std::endl; */
+    /* std::cout << "Error receiving packet from codec context!" << std::endl;
+     */
     return ret;
   }
 

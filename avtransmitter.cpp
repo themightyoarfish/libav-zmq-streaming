@@ -43,7 +43,7 @@ AVTransmitter::AVTransmitter(const std::string &host, const unsigned int port,
 
   // Global header is optional. If present, PPS and SPS h264 info will get
   // written to AVFormatContext's extradata, and consequently show up in the SDP
-  // file. Howerver the same info seems to be present inside the packet stream
+  // file. However the same info seems to be present inside the packet stream
   // when disabled, making it unnecessary.
   /* this->out_codec_ctx->flags |=AV_CODEC_FLAG_GLOBAL_HEADER; */
   if (!this->out_codec_ctx) {
@@ -52,9 +52,8 @@ AVTransmitter::AVTransmitter(const std::string &host, const unsigned int port,
 }
 
 void AVTransmitter::encode_frame(const cv::Mat &image) {
-  static bool first_time = true;
-  if (first_time) {
-    first_time = false;
+  if (first_time_) {
+    first_time_ = false;
     height_ = image.rows;
     width_ = image.cols;
     avutils::set_codec_params(this->out_codec_ctx, width_, height_, fps_,
@@ -121,6 +120,7 @@ void AVTransmitter::encode_frame(const cv::Mat &image) {
 AVTransmitter::~AVTransmitter() {
   av_write_trailer(this->ofmt_ctx);
   av_frame_free(&frame_);
+  av_freep(&frame_->data[0]);
   avcodec_close(this->out_codec_ctx);
   avio_context_free(&(this->ofmt_ctx->pb));
   avformat_free_context(this->ofmt_ctx);
@@ -134,7 +134,8 @@ void AVTransmitter::frame_ended() {
   // 9
   // TODO: remove if h264 is not used
   /* AVPacket pkt2 = {0}; */
-  /* // not sure if just using the last frame's pts or and dts like this is wise */
+  /* // not sure if just using the last frame's pts or and dts like this is wise
+   */
   /* pkt2.dts = frame_->pts; */
   /* pkt2.pts = frame_->pts; */
   /* pkt2.data = static_cast<std::uint8_t *>(av_mallocz(5)); */

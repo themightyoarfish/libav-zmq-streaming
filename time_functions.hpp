@@ -11,17 +11,37 @@
 
 using namespace std::chrono;
 
+/**
+ * @brief   Get seconds since epoch as double
+ *
+ * @return  Fractional econds since epoch
+ */
 static double current_millis() {
   return duration_cast<milliseconds>(system_clock::now().time_since_epoch())
              .count() /
          1000.0;
 }
 
+/**
+ * @brief   Get milliseconds from timepoint, discarding the rest
+ *
+ * @param t time point
+ *
+ * @return  millis(\ref t) % 1000
+ */
 static int _get_millis_from_tp(const system_clock::time_point &t) {
   auto duration_ms = duration_cast<milliseconds>(t.time_since_epoch());
   return duration_ms.count() % 1000;
 }
 
+/**
+ * @brief   Convert timepoint to `std::tm` calendar time object
+ *
+ * @param t time point
+ *
+ * @return  calendar time
+ * @warning POSIX only, uses `gmtime_r()`
+ */
 std::tm _tm_from_tp(const system_clock::time_point &t) {
   std::tm calendar_time_utc{};
   const std::time_t as_time_t = system_clock::to_time_t(t);
@@ -34,6 +54,15 @@ std::tm _tm_from_tp(const system_clock::time_point &t) {
   }
 }
 
+/**
+ * @brief   Get printable string for time
+ *
+ * @param t time point
+ * @param add_zone  Whether to add Z time sone suffix
+ * @param add_millis    Whether to add milliseconds after seconds
+ *
+ * @return
+ */
 static std::string format_timepoint_iso8601(const system_clock::time_point &t,
                                             bool add_zone = true,
                                             bool add_millis = true) {
@@ -50,6 +79,13 @@ static std::string format_timepoint_iso8601(const system_clock::time_point &t,
   return ss.str();
 }
 
+/**
+ * @brief   Paint time stamp on image
+ *
+ * @param image
+ * @param t
+ * @param ypos  fraction of height (from top) to paint timestamp at
+ */
 void stamp_image(cv::Mat &image,
                  system_clock::time_point t = system_clock::now(),
                  float ypos = 0.2) {
