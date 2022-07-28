@@ -144,7 +144,7 @@ int main(int argc, char* argv[]) {
   ValueArg<string> zmq_host("H", "host", "host of incoming zmq messages", false,
                             "localhohst", "Host as String", cmdline);
 
-  ValueArg<int> zmq_port("P", "port", "port of incoming zmq messages", false,
+  ValueArg<int> zmq_port("", "port", "port of incoming zmq messages", false,
                          6001, "Port as Integer", cmdline);
   ValueArg<string> zmq_user("u", "user", "user to authenticate at zmq", false,
                             "developer", "user as string", cmdline);
@@ -155,7 +155,7 @@ int main(int argc, char* argv[]) {
 
   ValueArg<string> rtp_host("R", "reciever", "reciever of the rtp stream",
                             false, "localhost", "Reciever as String", cmdline);
-  ValueArg<int> rtp_port("p", "stream-port", "port of stream", false, 8000,
+  ValueArg<int> rtp_port("", "stream-port", "port of stream", false, 8000,
                          "Port as Integer", cmdline);
   ValueArg<int> rtp_fps(
       "f", "fps", "fps of stream", false, 20, "fps as Integer", cmdline);
