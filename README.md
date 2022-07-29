@@ -100,7 +100,7 @@ Over a VPN connection via Azure to the same country (germany), performance is st
 good, the loss is low enough that only rarely a frame is missed.
 
 Over a VPN connection via Azure US and a much more delayed and lossly link, this is
-unuseable, as over UDP seemingly too few packets get lost to even decode a single frame
+unuseable, as over UDP seemingly too many packets get lost to even decode a single frame
 in time. We would need to try TCP for this, which `libavcodec` does not support for RTP.
 RTSP would have to be investigated.
 
