@@ -116,28 +116,20 @@ unintentional buffering and delays.
 Example usage is
 
 ```
-./build/encode_from_zmq --host 192.168.101.10 --port 6001 --reciever 192.168.19.202 --stream-port 8000
+./build/encode_from_zmq --host 192.168.101.10 --port 6001 --receiver 192.168.19.202 --stream-port 8000
 ```
 
 ```
 USAGE: 
 
-   ./encode_from_zmq  [-z] [--zoom-factor <zoom-factor as Float>] [-b
-                      <Bitrate as Integer>] [-f <fps as Integer>]
-                      [--stream-port <Port as Integer>] [-R <Reciever as
+   ./encode_from_zmq  [-b <Bitrate as Integer>] [-f <fps as Integer>]
+                      [--stream-port <Port as Integer>] [-R <Receiver as
                       String>] [-t <topic as string>] [-p <password as
                       string>] [-u <user as string>] [--port <Port as
                       Integer>] [-H <Host as String>] [--] [--version]
                       [-h]
 
 Where: 
-
-   -z,  --zoom
-     Enable Zoom.
-
-   --zoom-factor <zoom-factor as Float>
-     zoom-factor of stream
-
    -b <Bitrate as Integer>,  --bitrate <Bitrate as Integer>
      bitrate of stream
 
@@ -147,8 +139,8 @@ Where:
    --stream-port <Port as Integer>
      port of stream
 
-   -R <Reciever as String>,  --reciever <Reciever as String>
-     reciever of the rtp stream
+   -R <Receiver as String>,  --receiver <Receiver as String>
+     receiver of the rtp stream
 
    -t <topic as string>,  --topic <topic as string>
      topic to filter zmq messages
@@ -175,5 +167,5 @@ Where:
      Displays usage information and exits.
 
 
-   Recieve zmq from code, send via RTP
+   Receive zmq from code, send via RTP
 ```

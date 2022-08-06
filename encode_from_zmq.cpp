@@ -26,27 +26,14 @@ private:
   typedef boost::sync_bounded_queue<cv::Mat> Queue;
   Queue queue;
 
-  /**
-   * @brief factor by which central crop from digital-zoom operation needs to be
-   * resized. For value: 0, crop is returned as it is. For val: 1, crop is
-   * resized to original frame size.
-   */
-  double output_scale_factor;
 
-  /**
-   * @brief Enable or disable image zooming functionality. If true, images can
-   * be zoomed in or out via TUI.
-   */
-  bool do_zoom;
   bool has_printed_sdp;
 
 public:
   VideoStreamMonitor(const string& host,
                      unsigned int port,
                      unsigned int fps,
-                     unsigned int bitrate,
-                     double output_scale_factor,
-                     bool do_zoom);
+                     unsigned int bitrate);
 
   ~VideoStreamMonitor();
 
@@ -56,14 +43,8 @@ public:
 VideoStreamMonitor::VideoStreamMonitor(const string& host,
                                        unsigned int port,
                                        unsigned int fps,
-                                       unsigned int bitrate,
-                                       double output_scale_factor,
-                                       bool do_zoom) :
-    transmitter(host, port, fps, 1, bitrate),
-    queue(1),
-    output_scale_factor(output_scale_factor),
-    do_zoom(do_zoom),
-    has_printed_sdp(false) {
+                                       unsigned int bitrate) :
+    transmitter(host, port, fps, 1, bitrate), queue(1), has_printed_sdp(false) {
   stop.store(false);
   av_log_set_level(AV_LOG_QUIET);
   std::cout << "Streaming to " << host << ":" << port << std::endl;
@@ -72,19 +53,10 @@ VideoStreamMonitor::VideoStreamMonitor(const string& host,
       // const auto queue_status = queue.try_pull_front(image);
       //  keep the zoom_factor value in range [0.2, 1.0]
       cv::Mat image = queue.pull_front();
-      double zoom_factor =
-          this->do_zoom == true ? std::min(std::max(0.2, 0.5), 1.0) : 1.0;
       // if (queue_status == boost::concurrent::queue_op_status::empty) {
       //   std::this_thread::sleep_for(std::chrono::milliseconds(5));
       //   continue;
       // }
-
-      if (this->do_zoom) {
-        cv::resize(image, image,
-                   cv::Size(int(image.cols * zoom_factor),
-                            int(image.rows * zoom_factor)),
-                   cv::INTER_LINEAR);
-      }
       std::cout << "Begin encode " << std::setprecision(5) << std::fixed
                 << duration_cast<milliseconds>(
                        system_clock::now().time_since_epoch())
@@ -153,17 +125,14 @@ int main(int argc, char* argv[]) {
   ValueArg<string> zmq_topic("t", "topic", "topic to filter zmq messages",
                              false, "", "topic as string", cmdline);
 
-  ValueArg<string> rtp_host("R", "reciever", "reciever of the rtp stream",
-                            false, "127.0.0.1", "Reciever as String", cmdline);
+  ValueArg<string> rtp_host("R", "receiver", "receiver of the rtp stream",
+                            false, "127.0.0.1", "Receiver as String", cmdline);
   ValueArg<int> rtp_port("", "stream-port", "port of stream", false, 8000,
                          "Port as Integer", cmdline);
   ValueArg<int> rtp_fps(
       "f", "fps", "fps of stream", false, 20, "fps as Integer", cmdline);
   ValueArg<long> rtp_bitrate("b", "bitrate", "bitrate of stream", false, 100000,
                              "Bitrate as Integer", cmdline);
-  ValueArg<float> rtp_zoom_factor("", "zoom-factor", "zoom-factor of stream",
-                                  false, 1, "zoom-factor as Float", cmdline);
-  SwitchArg rtp_do_zoom("z", "zoom", "Enable Zoom.", cmdline, false);
   cmdline.parse(argc, argv);
   zmq::context_t ctx(1);
   zmq::socket_t socket(ctx, ZMQ_SUB);
@@ -185,9 +154,7 @@ int main(int argc, char* argv[]) {
   std::cout << "Starting main" << std::endl;
 
   VideoStreamMonitor streamer(rtp_host.getValue(), rtp_port.getValue(),
-                              rtp_fps.getValue(), rtp_bitrate.getValue(),
-                              rtp_zoom_factor.getValue(),
-                              rtp_do_zoom.getValue());
+                              rtp_fps.getValue(), rtp_bitrate.getValue());
 
   zmq::message_t recv_topic;
   zmq::message_t request;
