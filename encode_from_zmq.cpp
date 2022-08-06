@@ -20,7 +20,7 @@ using namespace TCLAP;
 
 class VideoStreamMonitor {
 private:
-  AVTransmitter* transmitter;
+  AVTransmitter transmitter;
   std::thread encoder;
   std::atomic<bool> stop;
   typedef boost::sync_bounded_queue<cv::Mat> Queue;
@@ -59,7 +59,7 @@ VideoStreamMonitor::VideoStreamMonitor(const string& host,
                                        unsigned int bitrate,
                                        double output_scale_factor,
                                        bool do_zoom) :
-    transmitter(new AVTransmitter(host, port, fps, 1, bitrate)),
+    transmitter(host, port, fps, 1, bitrate),
     queue(1),
     output_scale_factor(output_scale_factor),
     do_zoom(do_zoom),
@@ -92,7 +92,7 @@ VideoStreamMonitor::VideoStreamMonitor(const string& host,
                        1000.0
                 << std::endl;
       auto tic = current_millis();
-      transmitter->encode_frame(image);
+      transmitter.encode_frame(image);
       std::cout << "Took " << 1000 * (current_millis() - tic) << std::endl;
       std::cout << "Encoded at " << std::setprecision(5) << std::fixed
                 << duration_cast<milliseconds>(
@@ -103,7 +103,7 @@ VideoStreamMonitor::VideoStreamMonitor(const string& host,
 
       if (!has_printed_sdp) {
         has_printed_sdp = true;
-        string sdp      = transmitter->get_sdp();
+        string sdp      = transmitter.get_sdp();
         size_t index    = 0;
         while (true) {
           // Locate the substring to replace.
@@ -129,7 +129,6 @@ VideoStreamMonitor::~VideoStreamMonitor() {
   stop.store(true);
   encoder.join();
   queue.close();
-  delete transmitter;
 }
 
 void VideoStreamMonitor::process(cv::Mat data) {
@@ -202,8 +201,8 @@ int main(int argc, char* argv[]) {
     std::cout << "Received zmq message on topic " << topicStr << std::endl;
     string requestStr = request.to_string();
     if (topicStr.find("camera|") != string::npos) {
-      int64_t more = socket.get(zmq::sockopt::rcvmore);
-      uchar* ptr   = reinterpret_cast<uchar*>(request.data());
+      // int64_t more = socket.get(zmq::sockopt::rcvmore);
+      uchar* ptr = reinterpret_cast<uchar*>(request.data());
       std::vector<uchar> data(ptr, ptr + request.size());
       cv::Mat image = cv::imdecode(data, -1);
       streamer->process(image);
