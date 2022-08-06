@@ -184,10 +184,10 @@ int main(int argc, char* argv[]) {
             << ", on topic: " << topic << std::endl;
   std::cout << "Starting main" << std::endl;
 
-  auto streamer = new VideoStreamMonitor(
-      rtp_host.getValue(), rtp_port.getValue(), rtp_fps.getValue(),
-      rtp_bitrate.getValue(), rtp_zoom_factor.getValue(),
-      rtp_do_zoom.getValue());
+  VideoStreamMonitor streamer(rtp_host.getValue(), rtp_port.getValue(),
+                              rtp_fps.getValue(), rtp_bitrate.getValue(),
+                              rtp_zoom_factor.getValue(),
+                              rtp_do_zoom.getValue());
 
   zmq::message_t recv_topic;
   zmq::message_t request;
@@ -199,13 +199,19 @@ int main(int argc, char* argv[]) {
     result                = socket.recv(request, zmq::recv_flags::none);
     const string topicStr = recv_topic.to_string();
     std::cout << "Received zmq message on topic " << topicStr << std::endl;
-    string requestStr = request.to_string();
     if (topicStr.find("camera|") != string::npos) {
-      // int64_t more = socket.get(zmq::sockopt::rcvmore);
-      uchar* ptr = reinterpret_cast<uchar*>(request.data());
+      int64_t more = socket.get(zmq::sockopt::rcvmore);
+      uchar* ptr   = reinterpret_cast<uchar*>(request.data());
       std::vector<uchar> data(ptr, ptr + request.size());
       cv::Mat image = cv::imdecode(data, -1);
-      streamer->process(image);
+      streamer.process(image);
+      if (more == 1) {
+        // ROI data, but we dont need them, but they are still received here so
+        // they dont show up in the next cycle...
+        socket.recv(request, zmq::recv_flags::none);
+      }
+    } else {
+      std::cout << "Skipped non-camera message" << std::endl;
     }
   }
 }
