@@ -2,12 +2,11 @@ project(zmq-streaming C CXX)
 cmake_minimum_required(VERSION 3.15)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
-set(AUTOCRANE_DEPS "~/Development/autocrane-core/deps/")
+
 LIST(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_LIST_DIR})
 add_compile_options(-fno-lto)
 option(WITH_SPINNAKER "Use spinnaker?" OFF)
 
-list(INSERT CMAKE_PREFIX_PATH 0 ${AUTOCRANE_DEPS})
 set(Boost_ROOT ${AUTOCRANE_DEPS})
 find_package(Boost COMPONENTS thread REQUIRED PATHS)
 message(STATUS " Boost_INCLUDE_DIRS: ${Boost_INCLUDE_DIRS} ")
