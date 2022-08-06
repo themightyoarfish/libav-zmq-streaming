@@ -7,11 +7,6 @@ LIST(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_LIST_DIR})
 add_compile_options(-fno-lto)
 option(WITH_SPINNAKER "Use spinnaker?" OFF)
 
-# To fix OpenMP not found -> use brews llvm clang, not Apple Clang.
-# Taken from https://stackoverflow.com/a/53889826
-cmake_policy(GET CMP0025 InfoCompile)
-message(STATUS "CMP0025 ${InfoCompile}")
-
 list(INSERT CMAKE_PREFIX_PATH 0 ${AUTOCRANE_DEPS})
 set(Boost_ROOT ${AUTOCRANE_DEPS})
 find_package(Boost COMPONENTS thread REQUIRED PATHS)
