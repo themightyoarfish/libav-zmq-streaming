@@ -120,16 +120,21 @@ Example usage is
 ```
 
 ```
-USAGE: 
+USAGE:
 
-   ./encode_from_zmq  [-b <Bitrate as Integer>] [-f <fps as Integer>]
-                      [--stream-port <Port as Integer>] [-R <Receiver as
-                      String>] [-t <topic as string>] [-p <password as
-                      string>] [-u <user as string>] [--port <Port as
-                      Integer>] [-H <Host as String>] [--] [--version]
-                      [-h]
+   ./encode_from_zmq  [--bgr] [-b <Bitrate as Integer>] [-f <fps as
+                      Integer>] [--stream-port <Port as Integer>] [-R
+                      <Receiver as String>] [-t <topic as string>] [-p
+                      <password as string>] [-u <user as string>] [--port
+                      <Port as Integer>] [-H <Host as String>] [--]
+                      [--version] [-h]
 
-Where: 
+
+Where:
+
+   --bgr
+     switch color channels before sending
+
    -b <Bitrate as Integer>,  --bitrate <Bitrate as Integer>
      bitrate of stream
 
@@ -167,5 +172,5 @@ Where:
      Displays usage information and exits.
 
 
-   Receive zmq from code, send via RTP
+   Receive zmq (from KAI-core), send via RTP
 ```
