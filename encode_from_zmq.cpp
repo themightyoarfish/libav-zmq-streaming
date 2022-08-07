@@ -133,6 +133,7 @@ int main(int argc, char* argv[]) {
       "f", "fps", "fps of stream", false, 20, "fps as Integer", cmdline);
   ValueArg<long> rtp_bitrate("b", "bitrate", "bitrate of stream", false, 100000,
                              "Bitrate as Integer", cmdline);
+  SwitchArg bgr("", "bgr", "switch channels before sending", cmdline, false);
   cmdline.parse(argc, argv);
   zmq::context_t ctx(1);
   zmq::socket_t socket(ctx, ZMQ_SUB);
@@ -171,6 +172,9 @@ int main(int argc, char* argv[]) {
       uchar* ptr   = reinterpret_cast<uchar*>(request.data());
       std::vector<uchar> data(ptr, ptr + request.size());
       cv::Mat image = cv::imdecode(data, -1);
+      if (bgr.getValue()) {
+        cv::cvtColor(image, image, cv::COLOR_BGR2RGB);
+      }
       streamer.process(image);
       if (more == 1) {
         // ROI data, but we dont need them, but they are still received here so
