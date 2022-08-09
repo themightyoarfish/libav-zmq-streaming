@@ -17,8 +17,7 @@ AVTransmitter::AVTransmitter(const std::string& host,
                              unsigned int gop_size,
                              unsigned int target_bitrate) :
     fps_(fps), sdp_(""), gop_size_(gop_size), target_bitrate_(target_bitrate) {
-  AVOutputFormat* format =
-      (AVOutputFormat*)av_guess_format("rtp", nullptr, nullptr);
+  AVOutputFormat* format = av_guess_format("rtp", nullptr, nullptr);
   if (!format) {
     throw std::runtime_error("Could not guess output format.");
   }
@@ -33,7 +32,7 @@ AVTransmitter::AVTransmitter(const std::string& host,
                              avutils::av_strerror2(success));
   }
 
-  this->out_codec = (AVCodec*)avcodec_find_encoder(AV_CODEC_ID_VP9);
+  this->out_codec = avcodec_find_encoder(AV_CODEC_ID_VP9);
   if (!this->out_codec) {
     throw std::runtime_error("Could not find encoder");
   }
