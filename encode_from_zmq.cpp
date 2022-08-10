@@ -160,8 +160,8 @@ int main(int argc, char* argv[]) {
   zmq::message_t recv_topic;
   zmq::message_t request;
   zmq::recv_result_t result;
+  auto cycle_tic = current_millis();
   while (true) {
-    std::cout << "Waiting for zmq message" << std::endl;
     result = socket.recv(recv_topic, zmq::recv_flags::none);
     std::cout << "Got topic, waiting for zmq result" << std::endl;
     result                = socket.recv(request, zmq::recv_flags::none);
@@ -171,7 +171,10 @@ int main(int argc, char* argv[]) {
       int64_t more = socket.get(zmq::sockopt::rcvmore);
       uchar* ptr   = reinterpret_cast<uchar*>(request.data());
       std::vector<uchar> data(ptr, ptr + request.size());
+      auto tic      = current_millis();
       cv::Mat image = cv::imdecode(data, -1);
+      std::cout << "cv::imdecode Took " << 1000 * (current_millis() - tic)
+                << std::endl;
       if (bgr.getValue()) {
         cv::cvtColor(image, image, cv::COLOR_BGR2RGB);
       }
@@ -184,5 +187,8 @@ int main(int argc, char* argv[]) {
     } else {
       std::cout << "Skipped non-camera message" << std::endl;
     }
+    std::cout << "Cycle-Frequency: " << 1 / (current_millis() - cycle_tic)
+              << " Hz" << std::endl;
+    cycle_tic = current_millis();
   }
 }
