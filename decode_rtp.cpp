@@ -63,7 +63,7 @@ public:
     // we accept 0.1s reordering delay
     fmt_ctx->max_delay = 1'000'000 / 10;
 
-    fmt_ctx->interrupt_callback.opaque   = (void*)this;
+    fmt_ctx->interrupt_callback.opaque   = static_cast<void*>(this);
     fmt_ctx->interrupt_callback.callback = &RTPReceiver::should_interrupt;
 
     /* open input file, and allocate format context */
