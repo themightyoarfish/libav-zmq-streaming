@@ -133,7 +133,7 @@ int main(int argc, char* argv[]) {
       "f", "fps", "fps of stream", false, 20, "fps as Integer", cmdline);
   ValueArg<long> rtp_bitrate("b", "bitrate", "bitrate of stream", false, 100000,
                              "Bitrate as Integer", cmdline);
-  SwitchArg bgr("", "bgr", "switch channels before sending", cmdline, false);
+  SwitchArg bgr("", "bgr", "switch channels before sending", cmdline, true);
   cmdline.parse(argc, argv);
   zmq::context_t ctx(1);
   zmq::socket_t socket(ctx, ZMQ_SUB);
