@@ -139,9 +139,9 @@ LIST(APPEND FILES
 # define subgroups for XCode and other IDEs
 source_group( src FILES ${STREAM_HEADERS} ${STREAM_SRCS} )
 
-# # ##############################################################################
-# # libavstream library
-# # ##############################################################################
+# ##############################################################################
+# libavstream library
+# ##############################################################################
 set(libavstream_LIBRARY av-streaming)
 set(${libavstream_LIBRARY}_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(${libavstream_LIBRARY}_INCLUDE_DIR ${${libavstream_LIBRARY}_DIR})
@@ -162,9 +162,9 @@ target_sources(${libavstream_LIBRARY} PRIVATE
   ${${libavstream_LIBRARY}_DIR}/avutils.cpp
   ${${libavstream_LIBRARY}_DIR}/avtransmitter.cpp)
 
-# # ##############################################################################
-# # INSTALL
-# # ##############################################################################
+# ##############################################################################
+# INSTALL
+# ##############################################################################
 
 # Install headers into include/${libavstream_LIBRARY}/*, keeping the src directory structure.
 # This matches what other libraries (opencv, tensorflow..) do, although they
@@ -179,20 +179,20 @@ foreach(file ${STREAM_HEADERS})
   string(REGEX REPLACE "^${CMAKE_CURRENT_LIST_DIR}" "" dir "${dir}")
   string(REGEX REPLACE "^/" "" dir "${dir}")
 
-#   # During install, all headers are moved to a include/${libavstream_LIBRARY} subdirectory,
-#   # namespacing them away from other libraries to avoid conflicts.
+  # During install, all headers are moved to a include/${libavstream_LIBRARY} subdirectory,
+  # namespacing them away from other libraries to avoid conflicts.
   install(FILES ${file} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${libavstream_LIBRARY}/${dir})
 
-#   # During build time we create the include/${libavstream_LIBRARY}/**/*.h structure within
-#   # the ./build directory, such that it resembles what we have after an install
-#   # without the actual need to move the headers out of the ./src directory.
-#   # message(STATUS "Copy ${file} to ${CMAKE_BUILD_INCLUDEDIR}/${libavstream_LIBRARY}/${dir}")
+  # During build time we create the include/${libavstream_LIBRARY}/**/*.h structure within
+  # the ./build directory, such that it resembles what we have after an install
+  # without the actual need to move the headers out of the ./src directory.
+  # message(STATUS "Copy ${file} to ${CMAKE_BUILD_INCLUDEDIR}/${libavstream_LIBRARY}/${dir}")
   file(MAKE_DIRECTORY ${CMAKE_BUILD_INCLUDEDIR}/${libavstream_LIBRARY}/${dir})
   configure_file(${file} ${CMAKE_BUILD_INCLUDEDIR}/${libavstream_LIBRARY}/${dir} COPYONLY)
 endforeach()
 
-# # Only use the mocked ./build/include dir as include directory. CMake will take
-# # care of always moving the up-to-date headers there.
+# Only use the mocked ./build/include dir as include directory. CMake will take
+# care of always moving the up-to-date headers there.
 target_include_directories(${libavstream_LIBRARY} PUBLIC ${CMAKE_BUILD_INCLUDEDIR})
 
 
