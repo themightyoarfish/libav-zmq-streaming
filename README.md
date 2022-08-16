@@ -6,6 +6,14 @@ those packets via zmq to a subscriber.
 I have since enabled RTP transport, so the stream can be played with ffplay and VLC
 (with h264 only).
 
+## Building
+If you have autocrane-deps installed you most likely have all dependencies already. 
+To use the deps from autocrane folder run cmake like:
+```bash
+mkdir build && cd build
+cmake .. -DCMAKE_PREFIX_PATH="PATH/TO/autocrane-core/deps/" 
+```
+
 ## Binaries
 
 `encode_video_fromdir` reads images from a directory and sends it to an rtp host and port. An SDP file is written and
