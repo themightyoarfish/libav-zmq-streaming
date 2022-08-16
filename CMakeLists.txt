@@ -196,7 +196,7 @@ endforeach()
 target_include_directories(${libavstream_LIBRARY} PUBLIC ${CMAKE_BUILD_INCLUDEDIR})
 
 
-INSTALL(TARGETS ${libavstream_LIBRARY}
+INSTALL(TARGETS ${libavstream_LIBRARY} decode_rtp encode_from_zmq
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
