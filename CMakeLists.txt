@@ -3,7 +3,21 @@ cmake_minimum_required(VERSION 3.15)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
 
+# ##############################################################################
+# DETECT SYSTEM  #
+# ##############################################################################
+if(${CMAKE_SYSTEM_NAME} MATCHES Darwin)
+  set(OSX TRUE)
+elseif(${CMAKE_SYSTEM_NAME} MATCHES Linux)
+  set(LINUX TRUE)
+elseif(${WIN32})
+  set(WINDOWS TRUE)
+  include(${CMAKE_CURRENT_LIST_DIR}/tools/master_control/windows/CMakeLists.txt)
+endif()
+
+
 LIST(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_LIST_DIR})
+message(STATUS "stream CMAKE_PREFIX_PATH  ${CMAKE_PREFIX_PATH}")
 add_compile_options(-fno-lto)
 option(WITH_SPINNAKER "Use spinnaker?" OFF)
 
@@ -35,7 +49,20 @@ find_package(cppzmq REQUIRED)
 # set(tclap_ROOT " /usr/local/Cellar/")
 # find_package(tclap REQUIRED PATHS " /usr/local/Cellar")
 # message(STATUS " tclap headers at ${tclap_INCLUDE_DIR} ")
-set(tclap_INCLUDE_DIR "/usr/local/Cellar/tclap/1.2.5/include")
+
+# tclap
+if(OSX)
+  execute_process(COMMAND brew --prefix tclap ERROR_QUIET OUTPUT_VARIABLE
+      TCLAP_PREFIX RESULT_VARIABLE find-tclap-status)
+  if(find-tclap-status EQUAL 0)
+    string(REPLACE "\n" "" TCLAP_PREFIX ${TCLAP_PREFIX})
+  else()
+    message(FATAL_ERROR "Could not find tclap. Status was ${find-tclap-status}")
+  endif()
+  set(tclap_INCLUDE_DIR "${TCLAP_PREFIX}/include")
+endif()
+
+
 set(cppzmq_LIBRARIES cppzmq)
 set(LOCAL_INCLUDE_DIRS ${CMAKE_CURRENT_LIST_DIR})
 set(THIRD_PARTY_INCLUDE_DIRS ${BOOST_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS} ${cppzmq_INCLUDE_DIRS}
