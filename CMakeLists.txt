@@ -109,3 +109,64 @@ target_sources(decode_rtp PRIVATE
     decode_rtp.cpp ${COMMON_SRC})
 target_link_libraries(decode_rtp ${THIRD_PARTY_LIBRARIES})
 target_include_directories(decode_rtp PRIVATE ${LOCAL_INCLUDE_DIRS} ${THIRD_PARTY_INCLUDE_DIRS})
+
+
+# # ##############################################################################
+# # libavstream library
+# # ##############################################################################
+# set(libavstream_LIBRARY libav-streaming)
+# set(${libavstream_LIBRARY}_INCLUDE_DIR ${${libavstream_LIBRARY}_DIR})
+# set(${libavstream_LIBRARY}_SOURCES ${${libavstream_LIBRARY}_DIR})
+# # annoying thing about OBJECT libraries: They are propagated to direct
+# # dependents only, so linking to A from B and from C to B does not link
+# # A into C. Apparently the intended way to do this is a TARGET_OBJECTS
+# # generator expression
+# # (https://gitlab.kitware.com/cmake/cmake/-/issues/18010#note_422196).
+# # whatever man, i don't even understand. So we make this a simple
+# # static lib, it's easier.
+# add_library(${libavstream_LIBRARY} STATIC)
+# target_sources(${libavstream_LIBRARY} PRIVATE
+#   ${${libavstream_LIBRARY}_DIR}/avutils.cpp
+#   ${${libavstream_LIBRARY}_DIR}/avtransmitter.cpp)
+
+# # ##############################################################################
+# # INSTALL
+# # ##############################################################################
+
+# # Install headers into include/psiact/*, keeping the src directory structure.
+# # This matches what other libraries (opencv, tensorflow..) do, although they
+# # already maintain the explicit include/LIBRARY_NAME structure in their source
+# # tree. We prefer to have the headers next to the sources, so we need some
+# # mockery to still allow namespaced includes.
+# set(CMAKE_INSTALL_INCLUDEDIR ${CMAKE_INSTALL_PREFIX}/include)
+# set(CMAKE_BUILD_INCLUDEDIR ${CMAKE_BINARY_DIR}/include)
+# foreach(file ${PSIACT_HEADERS})
+#   set_target_properties(cppzmq PROPERTIES PUBLIC_HEADER ${file})
+#   get_filename_component(dir ${file} DIRECTORY BASE_DIR ${CMAKE_CURRENT_LIST_DIR})
+#   string(REGEX REPLACE "^${CMAKE_CURRENT_LIST_DIR}" "" dir "${dir}")
+#   string(REGEX REPLACE "^/" "" dir "${dir}")
+
+#   # During install, all headers are moved to a include/psiact subdirectory,
+#   # namespacing them away from other libraries to avoid conflicts.
+#   install(FILES ${file} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/psiact/${dir})
+
+#   # During build time we create the include/psiact/**/*.h structure within
+#   # the ./build directory, such that it resembles what we have after an install
+#   # without the actual need to move the headers out of the ./src directory.
+#   # message(STATUS "Copy ${file} to ${CMAKE_BUILD_INCLUDEDIR}/psiact/${dir}")
+#   file(MAKE_DIRECTORY ${CMAKE_BUILD_INCLUDEDIR}/psiact/${dir})
+#   configure_file(${file} ${CMAKE_BUILD_INCLUDEDIR}/psiact/${dir} COPYONLY)
+# endforeach()
+
+# # Only use the mocked ./build/include dir as include directory. CMake will take
+# # care of always moving the up-to-date headers there.
+# target_include_directories(psiact PUBLIC ${CMAKE_BUILD_INCLUDEDIR})
+
+
+# INSTALL(TARGETS psiact
+#   RUNTIME DESTINATION bin
+#   LIBRARY DESTINATION lib
+#   ARCHIVE DESTINATION lib
+#   INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+# )
+# message(STATUS "psiact CMAKE_INSTALL_INCLUDEDIR: ${CMAKE_INSTALL_INCLUDEDIR}")
