@@ -142,7 +142,7 @@ source_group( src FILES ${STREAM_HEADERS} ${STREAM_SRCS} )
 # # ##############################################################################
 # # libavstream library
 # # ##############################################################################
-set(libavstream_LIBRARY libav-streaming)
+set(libavstream_LIBRARY av-streaming)
 set(${libavstream_LIBRARY}_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(${libavstream_LIBRARY}_INCLUDE_DIR ${${libavstream_LIBRARY}_DIR})
 set(${libavstream_LIBRARY}_SOURCES ${${libavstream_LIBRARY}_DIR})
