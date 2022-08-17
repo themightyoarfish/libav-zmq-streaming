@@ -2,7 +2,8 @@ project(zmq-streaming C CXX)
 cmake_minimum_required(VERSION 3.15)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
-
+# Use linked libraries in rpath, otherwise binaries in /bin try to call wrong libs in /usr/local etc.
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 # ##############################################################################
 # DETECT SYSTEM  #
 # ##############################################################################
