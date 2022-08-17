@@ -174,7 +174,7 @@ target_sources(${libavstream_LIBRARY} PRIVATE
 set(CMAKE_INSTALL_INCLUDEDIR ${CMAKE_INSTALL_PREFIX}/include)
 set(CMAKE_BUILD_INCLUDEDIR ${CMAKE_BINARY_DIR}/include)
 foreach(file ${STREAM_HEADERS})
-  set_target_properties(cppzmq PROPERTIES PUBLIC_HEADER ${file})
+  set_target_properties(${libavstream_LIBRARY} PROPERTIES PUBLIC_HEADER ${file})
   get_filename_component(dir ${file} DIRECTORY BASE_DIR ${CMAKE_CURRENT_LIST_DIR})
   string(REGEX REPLACE "^${CMAKE_CURRENT_LIST_DIR}" "" dir "${dir}")
   string(REGEX REPLACE "^/" "" dir "${dir}")
@@ -201,5 +201,6 @@ INSTALL(TARGETS ${libavstream_LIBRARY} decode_rtp encode_from_zmq
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
   INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+  PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 message(STATUS "${libavstream_LIBRARY} CMAKE_INSTALL_INCLUDEDIR: ${CMAKE_INSTALL_INCLUDEDIR}")
