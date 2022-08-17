@@ -77,19 +77,8 @@ VideoStreamMonitor::VideoStreamMonitor(const string& host,
         has_printed_sdp = true;
         string sdp      = transmitter.get_sdp();
         size_t index    = 0;
-        while (true) {
-          // Locate the substring to replace.
-          index = sdp.find("\r\n", index);
-          if (index == string::npos) {
-            break;
-          }
-          // Make the replacement.
-          sdp.replace(index, 2, ";");
-          // Advance index forward so the next iteration doesn't pick it up as
-          // well.
-          index += 2;
-          std::cout << "VideoStreamMonitor SDP file is " << sdp << std::endl;
-        }
+        std::cout << "SDP file is: \r\n" << sdp << std::endl;
+        std::cout << "------------\r\nSDP file ended" << std::endl;
       }
       // data->releaseLock();
     }
