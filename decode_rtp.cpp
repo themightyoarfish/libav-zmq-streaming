@@ -120,8 +120,11 @@ public:
             rgb_frame->height      = current_frame->height;
             rgb_frame->format      = dst_fmt_;
             rgb_frame->linesize[0] = rgb_frame->width * 4;
-            rgb_frame->data[0] =
-                new uint8_t[rgb_frame->width * rgb_frame->height * 4 + 16];
+            /* rgb_frame->data[0] = */
+            /*     new uint8_t[rgb_frame->width * rgb_frame->height * 4 + 16];
+             */
+            av_image_alloc(rgb_frame->data, rgb_frame->linesize,
+                           rgb_frame->width, rgb_frame->height, dst_fmt_, 16);
 
             int slice_h = sws_scale(
                 sws_ctx, current_frame->data, current_frame->linesize, 0,
@@ -131,10 +134,11 @@ public:
                 static_cast<size_t>(rgb_frame->linesize[0])};
             cv::Mat image(sizes, CV_8UC4, rgb_frame->data[0], &steps[0]);
             auto image_created = system_clock::now();
-            // stamp_image(image, packet_received, 0.2);
-            // stamp_image(image, packet_sent, 0.4);
-            // stamp_image(image, image_created, 0.6);
+            /* stamp_image(image, packet_received, 0.2); */
+            /* stamp_image(image, packet_sent, 0.4); */
+            /* stamp_image(image, image_created, 0.6); */
             queue.push_back(image.clone());
+            av_freep(&rgb_frame->data[0]);
             std::cout << "Packet received: "
                       << format_timepoint_iso8601(packet_received) << std::endl;
             std::cout << "Packet sent: "
@@ -187,7 +191,7 @@ int main(int argc, char** argv) {
     cv::Mat image = receiver.get();
     if (!image.empty()) {
       auto image_displayed = system_clock::now();
-      // stamp_image(image, image_displayed, 0.8);
+      /* stamp_image(image, image_displayed, 0.8); */
       std::cout << "Image display started: "
                 << format_timepoint_iso8601(image_displayed) << std::endl;
       cv::imshow(window_name, image);

@@ -1,9 +1,11 @@
 project(zmq-streaming C CXX)
 cmake_minimum_required(VERSION 3.15)
 set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
+list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_LIST_DIR})
 # Use linked libraries in rpath, otherwise binaries in /bin try to call wrong libs in /usr/local etc.
-set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+list(APPEND CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 # ##############################################################################
 # DETECT SYSTEM  #
 # ##############################################################################
@@ -16,8 +18,6 @@ elseif(${WIN32})
   include(${CMAKE_CURRENT_LIST_DIR}/tools/master_control/windows/CMakeLists.txt)
 endif()
 
-
-LIST(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_LIST_DIR})
 message(STATUS "stream CMAKE_PREFIX_PATH  ${CMAKE_PREFIX_PATH}")
 add_compile_options(-fno-lto)
 option(WITH_SPINNAKER "Use spinnaker?" OFF)
