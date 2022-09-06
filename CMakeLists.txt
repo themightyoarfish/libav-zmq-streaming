@@ -22,8 +22,7 @@ message(STATUS "stream CMAKE_PREFIX_PATH  ${CMAKE_PREFIX_PATH}")
 add_compile_options(-fno-lto)
 option(WITH_SPINNAKER "Use spinnaker?" OFF)
 
-set(Boost_ROOT ${AUTOCRANE_DEPS})
-find_package(Boost COMPONENTS thread REQUIRED PATHS)
+find_package(Boost COMPONENTS thread REQUIRED)
 message(STATUS " Boost_INCLUDE_DIRS: ${Boost_INCLUDE_DIRS} ")
 message(STATUS " Boost_LIBRARIES ${Boost_LIBRARIES} ")
 set(OpenCV_ROOT ${AUTOCRANE_DEPS})
@@ -35,8 +34,8 @@ find_package(OpenCV COMPONENTS core highgui imgcodecs imgproc REQUIRED)
 set(FFMPEG_ROOT ${AUTOCRANE_DEPS})
 find_package(FFMPEG 4.4 EXACT REQUIRED COMPONENTS avdevice avformat swscale
     avcodec avutil swresample)
-message(STATUS " FFMPEG_LIBRARIES: ${FFMPEG_LIBRARIES} ")
-message(STATUS " FFMPEG_INCLUDE_DIRS: ${FFMPEG_INCLUDE_DIRS} ")
+message(STATUS "FFMPEG_LIBRARIES: ${FFMPEG_LIBRARIES}")
+message(STATUS "FFMPEG_INCLUDE_DIRS: ${FFMPEG_INCLUDE_DIRS}")
 
 if(WITH_SPINNAKER)
     find_package(Spinnaker 1.24.0.60)
@@ -138,7 +137,7 @@ LIST(APPEND FILES
 
 
 # define subgroups for XCode and other IDEs
-source_group( src FILES ${STREAM_HEADERS} ${STREAM_SRCS} )
+source_group(src FILES ${STREAM_HEADERS} ${STREAM_SRCS})
 
 # ##############################################################################
 # libavstream library
