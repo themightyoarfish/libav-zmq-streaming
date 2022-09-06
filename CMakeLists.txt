@@ -23,8 +23,8 @@ add_compile_options(-fno-lto)
 option(WITH_SPINNAKER "Use spinnaker?" OFF)
 
 find_package(Boost COMPONENTS thread REQUIRED)
-message(STATUS " Boost_INCLUDE_DIRS: ${Boost_INCLUDE_DIRS} ")
-message(STATUS " Boost_LIBRARIES ${Boost_LIBRARIES} ")
+message(STATUS "Boost_INCLUDE_DIRS: ${Boost_INCLUDE_DIRS}")
+message(STATUS "Boost_LIBRARIES ${Boost_LIBRARIES}")
 set(OpenCV_ROOT ${AUTOCRANE_DEPS})
 find_package(OpenCV COMPONENTS core highgui imgcodecs imgproc REQUIRED)
 
