@@ -13,25 +13,19 @@ if(${CMAKE_SYSTEM_NAME} MATCHES Darwin)
   set(OSX TRUE)
 elseif(${CMAKE_SYSTEM_NAME} MATCHES Linux)
   set(LINUX TRUE)
-elseif(${WIN32})
-  set(WINDOWS TRUE)
-  include(${CMAKE_CURRENT_LIST_DIR}/tools/master_control/windows/CMakeLists.txt)
 endif()
 
 message(STATUS "stream CMAKE_PREFIX_PATH  ${CMAKE_PREFIX_PATH}")
-add_compile_options(-fno-lto)
 option(WITH_SPINNAKER "Use spinnaker?" OFF)
 
 find_package(Boost COMPONENTS thread REQUIRED)
 message(STATUS "Boost_INCLUDE_DIRS: ${Boost_INCLUDE_DIRS}")
 message(STATUS "Boost_LIBRARIES ${Boost_LIBRARIES}")
-set(OpenCV_ROOT ${AUTOCRANE_DEPS})
 find_package(OpenCV COMPONENTS core highgui imgcodecs imgproc REQUIRED)
 
 # Caution: due to either buggyness or horrendous design of gcc/ld/whatever, the order of
 # the libraries is important for linking: if lib A depends on stuff from lib B, lib B
 # *must* come after lib A. it does not help if lib B has already been passed previously
-set(FFMPEG_ROOT ${AUTOCRANE_DEPS})
 find_package(FFMPEG 4.4 EXACT REQUIRED COMPONENTS avdevice avformat swscale
     avcodec avutil swresample)
 message(STATUS "FFMPEG_LIBRARIES: ${FFMPEG_LIBRARIES}")
