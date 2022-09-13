@@ -37,24 +37,8 @@ endif()
 
 find_package(cppzmq REQUIRED)
 
-# find_package(OpenMP REQUIRED)
-# set(CMAKE_CXX_FLAGS " ${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -DWITH_OPENMP ")
-# message(STATUS " OpenMP: ${OpenMP_CXX_LIBRARIES} ${OpenMP_INCLUDE_DIRS} ")
-# set(tclap_ROOT " /usr/local/Cellar/")
-# find_package(tclap REQUIRED PATHS " /usr/local/Cellar")
-# message(STATUS " tclap headers at ${tclap_INCLUDE_DIR} ")
+find_package(tclap REQUIRED)
 
-# tclap
-if(OSX)
-  execute_process(COMMAND brew --prefix tclap ERROR_QUIET OUTPUT_VARIABLE
-      TCLAP_PREFIX RESULT_VARIABLE find-tclap-status)
-  if(find-tclap-status EQUAL 0)
-    string(REPLACE "\n" "" TCLAP_PREFIX ${TCLAP_PREFIX})
-  else()
-    message(FATAL_ERROR "Could not find tclap. Status was ${find-tclap-status}")
-  endif()
-  set(tclap_INCLUDE_DIR "${TCLAP_PREFIX}/include")
-endif()
 
 
 set(cppzmq_LIBRARIES cppzmq)
