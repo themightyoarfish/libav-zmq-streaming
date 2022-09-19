@@ -1,5 +1,5 @@
 #include "avreceiver.hpp"
-#include "avutils.hpp"
+
 #include <chrono>
 #include <iostream>
 #include <opencv2/core.hpp>
@@ -10,8 +10,10 @@
 #include <vector>
 #include <zmq.hpp>
 
-AVReceiver::AVReceiver(const std::string &host, const unsigned int port)
-    : ctx(1) {
+#include "avutils.hpp"
+
+AVReceiver::AVReceiver(const std::string& host, const unsigned int port) :
+    ctx(1) {
   socket = zmq::socket_t(ctx, zmq::socket_type::sub);
   const auto connect_str =
       std::string("tcp://") + host + ":" + std::to_string(port);
@@ -19,7 +21,7 @@ AVReceiver::AVReceiver(const std::string &host, const unsigned int port)
   socket.set(zmq::sockopt::rcvhwm, 2);
   socket.connect(connect_str);
   std::cout << "Connected socket to " << connect_str << std::endl;
-  const AVCodec *codec = avcodec_find_decoder(AV_CODEC_ID_VP9);
+  const AVCodec* codec = avcodec_find_decoder(AV_CODEC_ID_VP9);
   if (!codec) {
     throw std::runtime_error("Could not find decoder");
   }
@@ -32,16 +34,16 @@ AVReceiver::AVReceiver(const std::string &host, const unsigned int port)
     throw std::runtime_error("Could not init parser");
   }
   /* const AVRational dst_fps = {fps, 1}; */
-  dec_ctx->codec_tag = 0;
+  dec_ctx->codec_tag  = 0;
   dec_ctx->codec_type = AVMEDIA_TYPE_VIDEO;
-  int res = avcodec_open2(dec_ctx, codec, nullptr);
+  int res             = avcodec_open2(dec_ctx, codec, nullptr);
   if (res < 0) {
     throw std::runtime_error("Could not open decoder context: " +
                              avutils::av_strerror2(res));
   }
 }
 
-int AVReceiver::decode(AVCodecContext *dec_ctx, AVFrame *frame, AVPacket *pkt) {
+int AVReceiver::decode(AVCodecContext* dec_ctx, AVFrame* frame, AVPacket* pkt) {
   int ret;
 
   ret = avcodec_send_packet(dec_ctx, pkt);
@@ -75,12 +77,12 @@ int AVReceiver::decode(AVCodecContext *dec_ctx, AVFrame *frame, AVPacket *pkt) {
 }
 
 void AVReceiver::receive() {
-  bool more = true;
+  bool more    = true;
   int num_pkts = 0;
   zmq::message_t incoming;
   std::vector<std::uint8_t> buffer;
-  AVFrame *frame = av_frame_alloc();
-  AVPacket *pkt = av_packet_alloc();
+  AVFrame* frame = av_frame_alloc();
+  AVPacket* pkt  = av_packet_alloc();
   while (more) {
     socket.recv(incoming, zmq::recv_flags::none);
     bytes_received += incoming.size();
@@ -100,7 +102,7 @@ void AVReceiver::receive() {
       while (in_len) {
         int result = av_parser_parse2(
             this->parser, this->dec_ctx, &pkt->data, &pkt->size,
-            static_cast<std::uint8_t *>(&buffer[0]), incoming.size(),
+            static_cast<std::uint8_t*>(&buffer[0]), incoming.size(),
             AV_NOPTS_VALUE, AV_NOPTS_VALUE, 0);
         in_len -= result;
         if (result < 0) {
@@ -127,23 +129,23 @@ void AVReceiver::receive() {
               std::vector<size_t> steps{
                   static_cast<size_t>(frame->linesize[0])};
 
-              const auto height = frame->height;
-              const auto width = frame->width;
+              const auto height      = frame->height;
+              const auto width       = frame->width;
               const auto actual_size = cv::Size(width, height);
-              void *y = frame->data[0];
-              void *u = frame->data[1];
-              void *v = frame->data[2];
+              void* y                = frame->data[0];
+              void* u                = frame->data[1];
+              void* v                = frame->data[2];
 
               cv::Mat y_mat(height, width, CV_8UC1, y, frame->linesize[0]);
-              cv::Mat u_mat(height / 2, width / 2, CV_8UC1, u,
-                            frame->linesize[1]);
-              cv::Mat v_mat(height / 2, width / 2, CV_8UC1, v,
-                            frame->linesize[2]);
+              cv::Mat u_mat(
+                  height / 2, width / 2, CV_8UC1, u, frame->linesize[1]);
+              cv::Mat v_mat(
+                  height / 2, width / 2, CV_8UC1, v, frame->linesize[2]);
               cv::Mat u_resized, v_resized;
               cv::resize(u_mat, u_resized, actual_size, 0, 0,
-                         cv::INTER_NEAREST); // repeat u values 4 times
+                         cv::INTER_NEAREST);  // repeat u values 4 times
               cv::resize(v_mat, v_resized, actual_size, 0, 0,
-                         cv::INTER_NEAREST); // repeat v values 4 times
+                         cv::INTER_NEAREST);  // repeat v values 4 times
 
               cv::Mat yuv;
 
