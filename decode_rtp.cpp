@@ -186,7 +186,7 @@ int main(int argc, char** argv) {
   /* av_log_set_level(AV_LOG_TRACE); */
   auto window_name = argc > 1 ? argv[1] : "test.sdp";
   RTPReceiver receiver(argc > 1 ? argv[1] : "test.sdp");
-  cv::namedWindow(window_name, cv::WINDOW_KEEPRATIO);
+  cv::namedWindow(window_name, cv::WINDOW_GUI_NORMAL);
   while (true) {
     cv::Mat image = receiver.get();
     if (!image.empty()) {
