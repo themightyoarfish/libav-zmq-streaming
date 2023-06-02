@@ -1,32 +1,35 @@
 #ifndef AVTRANSMITTER_HPP_A9X5A3XE
 #define AVTRANSMITTER_HPP_A9X5A3XE
 
-#include "avutils.hpp"
 #include <opencv2/core.hpp>
 #include <vector>
 
-class AVTransmitter {
+#include "avutils.hpp"
 
+class AVTransmitter {
   std::vector<std::uint8_t> imgbuf;
-  AVFormatContext *ofmt_ctx = nullptr;
-  AVCodec *out_codec = nullptr;
-  AVStream *out_stream = nullptr;
-  AVCodecContext *out_codec_ctx = nullptr;
-  SwsContext *swsctx = nullptr;
+  AVFormatContext* ofmt_ctx     = nullptr;
+  const AVCodec* out_codec      = nullptr;
+  AVStream* out_stream          = nullptr;
+  AVCodecContext* out_codec_ctx = nullptr;
+  SwsContext* swsctx            = nullptr;
   cv::Mat canvas_;
   unsigned int height_;
   unsigned int width_;
   unsigned int fps_;
-  AVFrame *frame_ = nullptr;
+  AVFrame* frame_ = nullptr;
   std::string sdp_;
   unsigned int gop_size_;
   unsigned int target_bitrate_;
 
 public:
-  AVTransmitter(const std::string &host, const unsigned int port,
-                unsigned int fps, unsigned int gop_size = 10, unsigned int target_bitrate = 4e6);
+  AVTransmitter(const std::string& host,
+                const unsigned int port,
+                unsigned int fps,
+                unsigned int gop_size       = 10,
+                unsigned int target_bitrate = 4e6);
 
-  void encode_frame(const cv::Mat &image);
+  void encode_frame(const cv::Mat& image);
 
   ~AVTransmitter();
 
