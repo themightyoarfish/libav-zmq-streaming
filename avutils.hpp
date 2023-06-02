@@ -17,27 +17,34 @@ namespace avutils {
 
 std::string av_strerror2(int errnum);
 
-int initialize_avformat_context(AVFormatContext *&fctx,
-                                AVOutputFormat *format = nullptr,
-                                const char *out_file = nullptr);
+int initialize_avformat_context(AVFormatContext*& fctx,
+                                const AVOutputFormat* format = nullptr,
+                                const char* out_file         = nullptr);
 
-void set_codec_params(AVCodecContext *&codec_ctx, double width, double height,
-                      int fps, int target_bitrate = 0, int gop_size = 12);
+void set_codec_params(AVCodecContext*& codec_ctx,
+                      double width,
+                      double height,
+                      int fps,
+                      int target_bitrate = 0,
+                      int gop_size       = 12);
 
-int initialize_codec_stream(AVStream *&stream, AVCodecContext *&codec_ctx,
-                            AVCodec *&codec);
+int initialize_codec_stream(AVStream*& stream,
+                            AVCodecContext*& codec_ctx,
+                            const AVCodec*& codec);
 
-SwsContext *initialize_sample_scaler(AVCodecContext *codec_ctx, double width,
+SwsContext* initialize_sample_scaler(AVCodecContext* codec_ctx,
+                                     double width,
                                      double height);
 
-AVFrame *allocate_frame_buffer(AVCodecContext *codec_ctx, double width,
-                               double height);
+AVFrame*
+allocate_frame_buffer(AVCodecContext* codec_ctx, double width, double height);
 
-int write_frame(AVCodecContext *codec_ctx, AVFormatContext *fmt_ctx,
-                AVFrame *frame);
+int write_frame(AVCodecContext* codec_ctx,
+                AVFormatContext* fmt_ctx,
+                AVFrame* frame);
 
-void generatePattern(cv::Mat &image, unsigned char i);
+void generatePattern(cv::Mat& image, unsigned char i);
 
-cv::Mat avframeYUV402p2Mat(const AVFrame *frame);
-} // namespace avutils
+cv::Mat avframeYUV402p2Mat(const AVFrame* frame);
+}  // namespace avutils
 #endif

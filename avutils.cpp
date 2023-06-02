@@ -26,7 +26,7 @@ std::string av_strerror2(int errnum) {
 }
 
 int initialize_avformat_context(AVFormatContext*& fctx,
-                                AVOutputFormat* format,
+                                const AVOutputFormat* format,
                                 const char* out_file) {
   return avformat_alloc_output_context2(&fctx, format, format->name, out_file);
 }
@@ -57,7 +57,7 @@ void set_codec_params(AVCodecContext*& codec_ctx,
 
 int initialize_codec_stream(AVStream*& stream,
                             AVCodecContext*& codec_ctx,
-                            AVCodec*& codec) {
+                            const AVCodec*& codec) {
   AVDictionary* codec_options = nullptr;
   /* av_dict_set(&codec_options, "profile", "high", 0); */
   /* av_dict_set(&codec_options, "preset", "ultrafast", 0); */
