@@ -18,7 +18,7 @@ namespace avutils {
 std::string av_strerror2(int errnum);
 
 int initialize_avformat_context(AVFormatContext*& fctx,
-                                const AVOutputFormat* format = nullptr,
+                                AVOutputFormat* format = nullptr,
                                 const char* out_file         = nullptr);
 
 void set_codec_params(AVCodecContext*& codec_ctx,
@@ -30,7 +30,7 @@ void set_codec_params(AVCodecContext*& codec_ctx,
 
 int initialize_codec_stream(AVStream*& stream,
                             AVCodecContext*& codec_ctx,
-                            const AVCodec*& codec);
+                            AVCodec*& codec);
 
 SwsContext* initialize_sample_scaler(AVCodecContext* codec_ctx,
                                      double width,
