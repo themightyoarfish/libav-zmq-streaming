@@ -1,4 +1,5 @@
 project(zmq-streaming C CXX)
+message(STATUS "--------------------- stream ---------------------------------")
 cmake_minimum_required(VERSION 3.15)
 set(CMAKE_CXX_STANDARD 14)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
@@ -39,12 +40,11 @@ find_package(cppzmq REQUIRED)
 
 find_package(tclap REQUIRED)
 
-
-
 set(cppzmq_LIBRARIES cppzmq)
 set(LOCAL_INCLUDE_DIRS ${CMAKE_CURRENT_LIST_DIR})
 set(THIRD_PARTY_INCLUDE_DIRS ${BOOST_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS} ${cppzmq_INCLUDE_DIRS}
     ${FFMPEG_INCLUDE_DIRS} ${Spinnaker_INCLUDE_DIR} ${tclap_INCLUDE_DIR})
+  message(STATUS "stream THIRD_PARTY_INCLUDE_DIRS: ${THIRD_PARTY_INCLUDE_DIRS}")
 set(THIRD_PARTY_LIBRARIES ${Boost_LIBRARIES} ${OpenCV_LIBRARIES} ${cppzmq_LIBRARIES}
     ${FFMPEG_LIBRARIES} ${Spinnaker_LIBRARIES} ${CMAKE_DL_LIBS})
 set(COMMON_SRC ${CMAKE_CURRENT_LIST_DIR}/avutils.cpp)
@@ -57,13 +57,13 @@ set(ZMQ_ENCODER_SRC ${CMAKE_CURRENT_LIST_DIR}/encode_from_zmq.cpp
 add_executable(encode_video_fromdir)
 target_sources(encode_video_fromdir PRIVATE ${ENCODER_SRC} ${COMMON_SRC})
 target_include_directories(encode_video_fromdir PRIVATE ${LOCAL_INCLUDE_DIRS})
-target_include_directories(encode_video_fromdir PRIVATE SYSTEM ${THIRD_PARTY_INCLUDE_DIRS})
+target_include_directories(encode_video_fromdir SYSTEM PRIVATE ${THIRD_PARTY_INCLUDE_DIRS})
 target_link_libraries(encode_video_fromdir ${THIRD_PARTY_LIBRARIES})
 
 add_executable(encode_from_zmq)
 target_sources(encode_from_zmq PRIVATE ${ZMQ_ENCODER_SRC} ${COMMON_SRC})
 target_include_directories(encode_from_zmq PRIVATE ${LOCAL_INCLUDE_DIRS})
-target_include_directories(encode_from_zmq PRIVATE SYSTEM ${THIRD_PARTY_INCLUDE_DIRS})
+target_include_directories(encode_from_zmq SYSTEM PRIVATE ${THIRD_PARTY_INCLUDE_DIRS})
 target_link_libraries(encode_from_zmq ${THIRD_PARTY_LIBRARIES})
 
 add_executable(decode_video_zmq)
@@ -134,7 +134,7 @@ message(STATUS "${libavstream_LIBRARY}_INCLUDE_DIR ${${libavstream_LIBRARY}_DIR}
 # static lib, it's easier.
 add_library(${libavstream_LIBRARY} STATIC)
 target_include_directories(${libavstream_LIBRARY} PRIVATE ${LOCAL_INCLUDE_DIRS})
-target_include_directories(${libavstream_LIBRARY} PRIVATE SYSTEM ${THIRD_PARTY_INCLUDE_DIRS})
+target_include_directories(${libavstream_LIBRARY} SYSTEM PRIVATE ${THIRD_PARTY_INCLUDE_DIRS})
 target_link_libraries(${libavstream_LIBRARY} PUBLIC ${THIRD_PARTY_LIBRARIES})
 target_sources(${libavstream_LIBRARY} PRIVATE
   ${${libavstream_LIBRARY}_DIR}/avutils.cpp
@@ -182,3 +182,5 @@ INSTALL(TARGETS ${libavstream_LIBRARY} decode_rtp encode_from_zmq
   PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 message(STATUS "${libavstream_LIBRARY} CMAKE_INSTALL_INCLUDEDIR: ${CMAKE_INSTALL_INCLUDEDIR}")
+
+message(STATUS "--------------------- stream end ---------------------------------")
