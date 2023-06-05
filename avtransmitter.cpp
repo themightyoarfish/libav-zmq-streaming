@@ -17,7 +17,7 @@ AVTransmitter::AVTransmitter(const std::string& host,
                              unsigned int gop_size,
                              unsigned int target_bitrate) :
     fps_(fps), sdp_(""), gop_size_(gop_size), target_bitrate_(target_bitrate) {
-  const AVOutputFormat* format = av_guess_format("rtp", nullptr, nullptr);
+  AVOutputFormat* format = av_guess_format("rtp", nullptr, nullptr);
   if (!format) {
     throw std::runtime_error("Could not guess output format.");
   }

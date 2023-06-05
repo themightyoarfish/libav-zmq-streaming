@@ -9,7 +9,7 @@
 class AVTransmitter {
   std::vector<std::uint8_t> imgbuf;
   AVFormatContext* ofmt_ctx     = nullptr;
-  const AVCodec* out_codec      = nullptr;
+  AVCodec* out_codec      = nullptr;
   AVStream* out_stream          = nullptr;
   AVCodecContext* out_codec_ctx = nullptr;
   SwsContext* swsctx            = nullptr;
