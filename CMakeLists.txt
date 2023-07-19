@@ -50,8 +50,7 @@ set(THIRD_PARTY_LIBRARIES ${Boost_LIBRARIES} ${OpenCV_LIBRARIES} ${cppzmq_LIBRAR
 set(COMMON_SRC ${CMAKE_CURRENT_LIST_DIR}/avutils.cpp)
 set(ENCODER_SRC ${CMAKE_CURRENT_LIST_DIR}/encode_video_fromdir.cpp
     ${CMAKE_CURRENT_LIST_DIR}/avtransmitter.cpp ${COMMON_SRC})
-set(DECODER_SRC ${CMAKE_CURRENT_LIST_DIR}/decode_video_zmq.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/avreceiver.cpp)
+set(DECODER_SRC ${CMAKE_CURRENT_LIST_DIR}/avreceiver.cpp ${CMAKE_CURRENT_LIST_DIR}/rtp_receiver.cpp)
 set(ZMQ_ENCODER_SRC ${CMAKE_CURRENT_LIST_DIR}/encode_from_zmq.cpp
     ${CMAKE_CURRENT_LIST_DIR}/avtransmitter.cpp ${COMMON_SRC})
 add_executable(encode_video_fromdir)
@@ -67,7 +66,7 @@ target_include_directories(encode_from_zmq SYSTEM PRIVATE ${THIRD_PARTY_INCLUDE_
 target_link_libraries(encode_from_zmq ${THIRD_PARTY_LIBRARIES})
 
 add_executable(decode_video_zmq)
-target_sources(decode_video_zmq PRIVATE ${DECODER_SRC} ${COMMON_SRC})
+target_sources(decode_video_zmq PRIVATE ${CMAKE_CURRENT_LIST_DIR}/decode_video_zmq.cpp ${DECODER_SRC} ${COMMON_SRC})
 target_include_directories(decode_video_zmq PRIVATE ${LOCAL_INCLUDE_DIRS}
     ${THIRD_PARTY_INCLUDE_DIRS})
 target_link_libraries(decode_video_zmq ${THIRD_PARTY_LIBRARIES})
@@ -84,7 +83,7 @@ endif()
 
 add_executable(decode_rtp)
 target_sources(decode_rtp PRIVATE
-    decode_rtp.cpp ${COMMON_SRC})
+    decode_rtp.cpp ${COMMON_SRC} ${DECODER_SRC})
 target_link_libraries(decode_rtp ${THIRD_PARTY_LIBRARIES})
 target_include_directories(decode_rtp PRIVATE ${LOCAL_INCLUDE_DIRS} ${THIRD_PARTY_INCLUDE_DIRS})
 
@@ -97,6 +96,7 @@ LIST(APPEND STREAM_SRCS
   ${CMAKE_CURRENT_LIST_DIR}/avreceiver.cpp
   ${CMAKE_CURRENT_LIST_DIR}/avutils.cpp
   ${CMAKE_CURRENT_LIST_DIR}/decode_rtp.cpp
+  ${CMAKE_CURRENT_LIST_DIR}/rtp_receiver.cpp
   ${CMAKE_CURRENT_LIST_DIR}/decode_video_zmq.cpp
   ${CMAKE_CURRENT_LIST_DIR}/encode_spinnaker.cpp
   ${CMAKE_CURRENT_LIST_DIR}/encode_from_zmq.cpp
@@ -107,6 +107,7 @@ LIST(APPEND STREAM_HEADERS
 ${CMAKE_CURRENT_LIST_DIR}/avtransmitter.hpp
 ${CMAKE_CURRENT_LIST_DIR}/avreceiver.hpp
 ${CMAKE_CURRENT_LIST_DIR}/avutils.hpp
+${CMAKE_CURRENT_LIST_DIR}/rtp_receiver.hpp
 )
 
 LIST(APPEND FILES
