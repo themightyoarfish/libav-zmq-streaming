@@ -48,13 +48,12 @@ set(THIRD_PARTY_INCLUDE_DIRS ${BOOST_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS} ${cppz
 set(THIRD_PARTY_LIBRARIES ${Boost_LIBRARIES} ${OpenCV_LIBRARIES} ${cppzmq_LIBRARIES}
     ${FFMPEG_LIBRARIES} ${Spinnaker_LIBRARIES} ${CMAKE_DL_LIBS})
 set(COMMON_SRC ${CMAKE_CURRENT_LIST_DIR}/avutils.cpp)
-set(ENCODER_SRC ${CMAKE_CURRENT_LIST_DIR}/encode_video_fromdir.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/avtransmitter.cpp ${COMMON_SRC})
+set(ENCODER_SRC ${CMAKE_CURRENT_LIST_DIR}/avtransmitter.cpp ${COMMON_SRC})
 set(DECODER_SRC ${CMAKE_CURRENT_LIST_DIR}/avreceiver.cpp ${CMAKE_CURRENT_LIST_DIR}/rtp_receiver.cpp)
 set(ZMQ_ENCODER_SRC ${CMAKE_CURRENT_LIST_DIR}/encode_from_zmq.cpp
     ${CMAKE_CURRENT_LIST_DIR}/avtransmitter.cpp ${COMMON_SRC})
 add_executable(encode_video_fromdir)
-target_sources(encode_video_fromdir PRIVATE ${ENCODER_SRC} ${COMMON_SRC})
+target_sources(encode_video_fromdir PRIVATE ${CMAKE_CURRENT_LIST_DIR}/encode_video_fromdir.cpp ${ENCODER_SRC} ${COMMON_SRC})
 target_include_directories(encode_video_fromdir PRIVATE ${LOCAL_INCLUDE_DIRS})
 target_include_directories(encode_video_fromdir SYSTEM PRIVATE ${THIRD_PARTY_INCLUDE_DIRS})
 target_link_libraries(encode_video_fromdir ${THIRD_PARTY_LIBRARIES})
@@ -137,9 +136,7 @@ add_library(${libavstream_LIBRARY} STATIC)
 target_include_directories(${libavstream_LIBRARY} PRIVATE ${LOCAL_INCLUDE_DIRS})
 target_include_directories(${libavstream_LIBRARY} SYSTEM PRIVATE ${THIRD_PARTY_INCLUDE_DIRS})
 target_link_libraries(${libavstream_LIBRARY} PUBLIC ${THIRD_PARTY_LIBRARIES})
-target_sources(${libavstream_LIBRARY} PRIVATE
-  ${${libavstream_LIBRARY}_DIR}/avutils.cpp
-  ${${libavstream_LIBRARY}_DIR}/avtransmitter.cpp)
+target_sources(${libavstream_LIBRARY} PRIVATE ${DECODER_SRC} ${ENCODER_SRC})
 
 # ##############################################################################
 # INSTALL
