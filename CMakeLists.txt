@@ -48,7 +48,7 @@ set(THIRD_PARTY_INCLUDE_DIRS ${BOOST_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS} ${cppz
 set(THIRD_PARTY_LIBRARIES ${Boost_LIBRARIES} ${OpenCV_LIBRARIES} ${cppzmq_LIBRARIES}
     ${FFMPEG_LIBRARIES} ${Spinnaker_LIBRARIES} ${CMAKE_DL_LIBS})
 set(COMMON_SRC ${CMAKE_CURRENT_LIST_DIR}/avutils.cpp)
-set(ENCODER_SRC ${CMAKE_CURRENT_LIST_DIR}/avtransmitter.cpp ${COMMON_SRC})
+set(ENCODER_SRC ${CMAKE_CURRENT_LIST_DIR}/avtransmitter.cpp)
 set(DECODER_SRC ${CMAKE_CURRENT_LIST_DIR}/avreceiver.cpp ${CMAKE_CURRENT_LIST_DIR}/rtp_receiver.cpp)
 set(ZMQ_ENCODER_SRC ${CMAKE_CURRENT_LIST_DIR}/encode_from_zmq.cpp
     ${CMAKE_CURRENT_LIST_DIR}/avtransmitter.cpp ${COMMON_SRC})
@@ -103,10 +103,10 @@ LIST(APPEND STREAM_SRCS
 )
 
 LIST(APPEND STREAM_HEADERS
-${CMAKE_CURRENT_LIST_DIR}/avtransmitter.hpp
-${CMAKE_CURRENT_LIST_DIR}/avreceiver.hpp
-${CMAKE_CURRENT_LIST_DIR}/avutils.hpp
-${CMAKE_CURRENT_LIST_DIR}/rtp_receiver.hpp
+  ${CMAKE_CURRENT_LIST_DIR}/avtransmitter.hpp
+  ${CMAKE_CURRENT_LIST_DIR}/avreceiver.hpp
+  ${CMAKE_CURRENT_LIST_DIR}/avutils.hpp
+  ${CMAKE_CURRENT_LIST_DIR}/rtp_receiver.hpp
 )
 
 LIST(APPEND FILES
@@ -150,7 +150,6 @@ target_sources(${libavstream_LIBRARY} PRIVATE ${DECODER_SRC} ${ENCODER_SRC})
 set(CMAKE_INSTALL_INCLUDEDIR ${CMAKE_INSTALL_PREFIX}/include)
 set(CMAKE_BUILD_INCLUDEDIR ${CMAKE_BINARY_DIR}/include)
 foreach(file ${STREAM_HEADERS})
-  set_target_properties(${libavstream_LIBRARY} PROPERTIES PUBLIC_HEADER ${file})
   get_filename_component(dir ${file} DIRECTORY BASE_DIR ${CMAKE_CURRENT_LIST_DIR})
   string(REGEX REPLACE "^${CMAKE_CURRENT_LIST_DIR}" "" dir "${dir}")
   string(REGEX REPLACE "^/" "" dir "${dir}")
@@ -162,7 +161,7 @@ foreach(file ${STREAM_HEADERS})
   # During build time we create the include/${libavstream_LIBRARY}/**/*.h structure within
   # the ./build directory, such that it resembles what we have after an install
   # without the actual need to move the headers out of the ./src directory.
-  # message(STATUS "Copy ${file} to ${CMAKE_BUILD_INCLUDEDIR}/${libavstream_LIBRARY}/${dir}")
+  message(STATUS "Copy ${file} to ${CMAKE_BUILD_INCLUDEDIR}/${libavstream_LIBRARY}/${dir}")
   file(MAKE_DIRECTORY ${CMAKE_BUILD_INCLUDEDIR}/${libavstream_LIBRARY}/${dir})
   configure_file(${file} ${CMAKE_BUILD_INCLUDEDIR}/${libavstream_LIBRARY}/${dir} COPYONLY)
 endforeach()
@@ -172,12 +171,14 @@ endforeach()
 target_include_directories(${libavstream_LIBRARY} PUBLIC ${CMAKE_BUILD_INCLUDEDIR})
 
 
-INSTALL(TARGETS ${libavstream_LIBRARY} decode_rtp encode_from_zmq
+INSTALL(TARGETS
+    ${libavstream_LIBRARY}
+    decode_rtp
+    encode_from_zmq
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
   INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-  PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 message(STATUS "${libavstream_LIBRARY} CMAKE_INSTALL_INCLUDEDIR: ${CMAKE_INSTALL_INCLUDEDIR}")
 
