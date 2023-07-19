@@ -136,7 +136,7 @@ add_library(${libavstream_LIBRARY} STATIC)
 target_include_directories(${libavstream_LIBRARY} PRIVATE ${LOCAL_INCLUDE_DIRS})
 target_include_directories(${libavstream_LIBRARY} SYSTEM PRIVATE ${THIRD_PARTY_INCLUDE_DIRS})
 target_link_libraries(${libavstream_LIBRARY} PUBLIC ${THIRD_PARTY_LIBRARIES})
-target_sources(${libavstream_LIBRARY} PRIVATE ${DECODER_SRC} ${ENCODER_SRC})
+target_sources(${libavstream_LIBRARY} PRIVATE ${DECODER_SRC} ${ENCODER_SRC} ${COMMON_SRC})
 
 # ##############################################################################
 # INSTALL
