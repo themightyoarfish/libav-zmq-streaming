@@ -53,9 +53,8 @@ AVTransmitter::AVTransmitter(const std::string& host,
 }
 
 void AVTransmitter::encode_frame(const cv::Mat& image) {
-  static bool first_time = true;
-  if (first_time) {
-    first_time = false;
+  if (first_time_) {
+    first_time_ = false;
     height_    = image.rows;
     width_     = image.cols;
     avutils::set_codec_params(

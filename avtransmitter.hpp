@@ -21,6 +21,7 @@ class AVTransmitter {
   std::string sdp_;
   unsigned int gop_size_;
   unsigned int target_bitrate_;
+  bool first_time_ = true;
 
 public:
   AVTransmitter(const std::string& host,
