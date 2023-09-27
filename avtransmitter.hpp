@@ -9,7 +9,7 @@
 class AVTransmitter {
   std::vector<std::uint8_t> imgbuf;
   AVFormatContext* ofmt_ctx     = nullptr;
-  AVCodec* out_codec      = nullptr;
+  AVCodec* out_codec            = nullptr;
   AVStream* out_stream          = nullptr;
   AVCodecContext* out_codec_ctx = nullptr;
   SwsContext* swsctx            = nullptr;
@@ -28,7 +28,8 @@ public:
                 const unsigned int port,
                 unsigned int fps,
                 unsigned int gop_size       = 10,
-                unsigned int target_bitrate = 4e6);
+                unsigned int target_bitrate = 4e6,
+                int pkt_size                = -1);
 
   void encode_frame(const cv::Mat& image);
 

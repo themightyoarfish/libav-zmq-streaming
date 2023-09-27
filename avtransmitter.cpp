@@ -1,8 +1,8 @@
-#include "avtransmitter.hpp"
-
 #include <chrono>
 #include <iomanip>
 #include <iostream>
+
+#include "avtransmitter.hpp"
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
@@ -15,13 +15,17 @@ AVTransmitter::AVTransmitter(const std::string& host,
                              const unsigned int port,
                              unsigned int fps,
                              unsigned int gop_size,
-                             unsigned int target_bitrate) :
+                             unsigned int target_bitrate,
+                             int pkt_size) :
     fps_(fps), sdp_(""), gop_size_(gop_size), target_bitrate_(target_bitrate) {
   AVOutputFormat* format = av_guess_format("rtp", nullptr, nullptr);
   if (!format) {
     throw std::runtime_error("Could not guess output format.");
   }
-  const auto url = std::string("rtp://") + host + ":" + std::to_string(port);
+  std::string url = std::string("rtp://") + host + ":" + std::to_string(port);
+  if (pkt_size > 0) {
+    url += "?pkt_size=" + std::to_string(pkt_size);
+  }
   int success =
       avutils::initialize_avformat_context(this->ofmt_ctx, format, url.c_str());
   this->ofmt_ctx->strict_std_compliance = FF_COMPLIANCE_EXPERIMENTAL;
@@ -55,8 +59,8 @@ AVTransmitter::AVTransmitter(const std::string& host,
 void AVTransmitter::encode_frame(const cv::Mat& image) {
   if (first_time_) {
     first_time_ = false;
-    height_    = image.rows;
-    width_     = image.cols;
+    height_     = image.rows;
+    width_      = image.cols;
     avutils::set_codec_params(
         this->out_codec_ctx, width_, height_, fps_, target_bitrate_, gop_size_);
     int success = avutils::initialize_codec_stream(
