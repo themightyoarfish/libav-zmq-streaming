@@ -1,5 +1,3 @@
-#include "avutils.hpp"
-
 #include <chrono>
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
@@ -7,6 +5,8 @@
 #include <opencv2/imgproc.hpp>
 #include <thread>
 #include <vector>
+
+#include "avutils.hpp"
 
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -123,25 +123,27 @@ allocate_frame_buffer(AVCodecContext* codec_ctx, double width, double height) {
 int write_frame(AVCodecContext* codec_ctx,
                 AVFormatContext* fmt_ctx,
                 AVFrame* frame) {
-  AVPacket pkt = {0};
   /* av_init_packet(&pkt); */
 
   int ret = avcodec_send_frame(codec_ctx, frame);
   if (ret < 0) {
-    /* std::cout << "Error sending frame to codec context!" << std::endl; */
     return ret;
   }
 
-  ret = avcodec_receive_packet(codec_ctx, &pkt);
-  if (ret < 0) {
-    /* std::cout << "Error receiving packet from codec context!" << std::endl;
-     */
-    return ret;
+  while (ret >= 0 && ret != AVERROR(EAGAIN)) {
+    AVPacket pkt = {0};
+    ret          = avcodec_receive_packet(codec_ctx, &pkt);
+    av_write_frame(fmt_ctx, &pkt);
+    if (ret == AVERROR(EAGAIN)) {
+      // this signals encoder needs new input, so we are done sending
+      return 0;
+    } else if (ret < 0) {
+      // legitimate problem
+      return ret;
+    }
   }
 
-  av_write_frame(fmt_ctx, &pkt);
-
-  return ret;
+  return 0;
 }
 
 void generatePattern(cv::Mat& image, unsigned char i) {
