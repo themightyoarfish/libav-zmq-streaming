@@ -43,6 +43,7 @@ void set_codec_params(AVCodecContext*& codec_ctx,
   if (target_bitrate > 0) {
     codec_ctx->bit_rate = target_bitrate;
     codec_ctx->rc_max_rate = target_bitrate;
+    codec_ctx->rc_min_rate = target_bitrate;
     codec_ctx->bit_rate_tolerance = 0;
   }
   codec_ctx->thread_count = 1;
