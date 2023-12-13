@@ -93,7 +93,7 @@ void AVTransmitter::encode_frame(const cv::Mat& image) {
         avutils::allocate_frame_buffer(this->out_codec_ctx, width_, height_);
     int success = avformat_write_header(this->ofmt_ctx, nullptr);
     if (success != 0) {
-      std::runtime_error("Could not write header! " +
+      throw std::runtime_error("Could not write header! " +
                          avutils::av_strerror2(success));
     }
   }
