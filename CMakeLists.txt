@@ -1,7 +1,7 @@
 project(zmq-streaming C CXX)
 message(STATUS "--------------------- stream ---------------------------------")
 cmake_minimum_required(VERSION 3.15)
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 20)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
 list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_LIST_DIR})
@@ -23,6 +23,8 @@ find_package(Boost COMPONENTS thread REQUIRED)
 message(STATUS "Boost_INCLUDE_DIRS: ${Boost_INCLUDE_DIRS}")
 message(STATUS "Boost_LIBRARIES ${Boost_LIBRARIES}")
 find_package(OpenCV COMPONENTS core highgui imgcodecs imgproc REQUIRED)
+find_package(cppzmq REQUIRED)
+find_package(tclap REQUIRED)
 
 # Caution: due to either buggyness or horrendous design of gcc/ld/whatever, the order of
 # the libraries is important for linking: if lib A depends on stuff from lib B, lib B
@@ -36,10 +38,6 @@ if(WITH_SPINNAKER)
     find_package(Spinnaker 1.24.0.60)
 endif()
 
-find_package(cppzmq REQUIRED)
-
-find_package(tclap REQUIRED)
-
 set(cppzmq_LIBRARIES cppzmq)
 set(LOCAL_INCLUDE_DIRS ${CMAKE_CURRENT_LIST_DIR})
 set(THIRD_PARTY_INCLUDE_DIRS ${BOOST_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS} ${cppzmq_INCLUDE_DIRS}
@@ -52,25 +50,33 @@ set(ENCODER_SRC ${CMAKE_CURRENT_LIST_DIR}/avtransmitter.cpp)
 set(DECODER_SRC ${CMAKE_CURRENT_LIST_DIR}/avreceiver.cpp ${CMAKE_CURRENT_LIST_DIR}/rtp_receiver.cpp)
 set(ZMQ_ENCODER_SRC ${CMAKE_CURRENT_LIST_DIR}/encode_from_zmq.cpp
     ${CMAKE_CURRENT_LIST_DIR}/avtransmitter.cpp ${COMMON_SRC})
-add_executable(encode_video_fromdir)
-target_sources(encode_video_fromdir PRIVATE ${CMAKE_CURRENT_LIST_DIR}/encode_video_fromdir.cpp ${ENCODER_SRC} ${COMMON_SRC})
-target_include_directories(encode_video_fromdir PRIVATE ${LOCAL_INCLUDE_DIRS})
-target_include_directories(encode_video_fromdir SYSTEM PRIVATE ${THIRD_PARTY_INCLUDE_DIRS})
-target_link_libraries(encode_video_fromdir ${THIRD_PARTY_LIBRARIES})
 
-add_executable(encode_from_zmq)
-target_sources(encode_from_zmq PRIVATE ${ZMQ_ENCODER_SRC} ${COMMON_SRC})
-target_include_directories(encode_from_zmq PRIVATE ${LOCAL_INCLUDE_DIRS})
-target_include_directories(encode_from_zmq SYSTEM PRIVATE ${THIRD_PARTY_INCLUDE_DIRS})
-target_link_libraries(encode_from_zmq ${THIRD_PARTY_LIBRARIES})
+option(BUILD_zmq_encoder OFF)
+if (BUILD_zmq_encoder)
+    find_package(LibDataChannel REQUIRED)
+    find_package(nlohmann_json REQUIRED)
+    add_executable(encode_video_fromdir)
+    target_sources(encode_video_fromdir PRIVATE ${CMAKE_CURRENT_LIST_DIR}/encode_video_fromdir.cpp ${ENCODER_SRC} ${COMMON_SRC})
+    target_include_directories(encode_video_fromdir PRIVATE ${LOCAL_INCLUDE_DIRS})
+    target_include_directories(encode_video_fromdir SYSTEM PRIVATE ${THIRD_PARTY_INCLUDE_DIRS})
+    target_link_libraries(encode_video_fromdir ${THIRD_PARTY_LIBRARIES}
+        LibDataChannel::LibDataChannel nlohmann_json::nlohmann_json)
 
-add_executable(decode_video_zmq)
-target_sources(decode_video_zmq PRIVATE ${CMAKE_CURRENT_LIST_DIR}/decode_video_zmq.cpp ${DECODER_SRC} ${COMMON_SRC})
-target_include_directories(decode_video_zmq PRIVATE ${LOCAL_INCLUDE_DIRS}
-    ${THIRD_PARTY_INCLUDE_DIRS})
-target_link_libraries(decode_video_zmq ${THIRD_PARTY_LIBRARIES})
+    add_executable(encode_from_zmq)
+    target_sources(encode_from_zmq PRIVATE ${ZMQ_ENCODER_SRC} ${COMMON_SRC})
+    target_include_directories(encode_from_zmq PRIVATE ${LOCAL_INCLUDE_DIRS})
+    target_include_directories(encode_from_zmq SYSTEM PRIVATE ${THIRD_PARTY_INCLUDE_DIRS})
+    target_link_libraries(encode_from_zmq ${THIRD_PARTY_LIBRARIES})
+
+    add_executable(decode_video_zmq)
+    target_sources(decode_video_zmq PRIVATE ${CMAKE_CURRENT_LIST_DIR}/decode_video_zmq.cpp ${DECODER_SRC} ${COMMON_SRC})
+    target_include_directories(decode_video_zmq PRIVATE ${LOCAL_INCLUDE_DIRS}
+        ${THIRD_PARTY_INCLUDE_DIRS})
+    target_link_libraries(decode_video_zmq ${THIRD_PARTY_LIBRARIES})
+endif()
 
 if(${SPINNAKER_FOUND})
+    message(STATUS "Building spinnaker encoding")
     add_executable(encode_spinnaker)
     target_sources(encode_spinnaker PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/encode_spinnaker.cpp
@@ -78,6 +84,8 @@ if(${SPINNAKER_FOUND})
     target_include_directories(encode_spinnaker PRIVATE ${LOCAL_INCLUDE_DIRS}
         ${THIRD_PARTY_INCLUDE_DIRS})
     target_link_libraries(encode_spinnaker ${THIRD_PARTY_LIBRARIES})
+else()
+    message(STATUS "Not building spinnaker encoding")
 endif()
 
 add_executable(decode_rtp)
@@ -174,12 +182,16 @@ target_include_directories(${libavstream_LIBRARY} PUBLIC ${CMAKE_BUILD_INCLUDEDI
 INSTALL(TARGETS
     ${libavstream_LIBRARY}
     decode_rtp
-    encode_from_zmq
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
   INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
+if (BUILD_zmq_encoder)
+    INSTALL(TARGETS
+        encode_from_zmq
+        )
+endif()
 message(STATUS "${libavstream_LIBRARY} CMAKE_INSTALL_INCLUDEDIR: ${CMAKE_INSTALL_INCLUDEDIR}")
 
 message(STATUS "--------------------- stream end ---------------------------------")

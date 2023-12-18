@@ -1,6 +1,7 @@
 #include <atomic>
 #include <boost/thread/sync_bounded_queue.hpp>
 #include <chrono>
+#include <rtc/peerconnection.hpp>
 #include <csignal>
 #include <iostream>
 #include <opencv2/core.hpp>
@@ -10,13 +11,219 @@
 #include <tclap/CmdLine.h>
 #include <thread>
 #include <zmq.hpp>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+
 
 #include "avtransmitter.hpp"
 #include "time_functions.hpp"
 
-using std::string;
+
+using namespace std;
 using namespace std::chrono;
 using namespace TCLAP;
+
+void connect_socket(zmq::socket_t& socket,
+                    const string& host,
+                    int port,
+                    const string& user,
+                    const string& pw,
+                    const string& topic);
+int get_free_port();
+
+struct SenderConfig {
+  string signaling_address;
+  string topic;
+  int udp_port;
+  string udp_hostname;
+};
+
+class Sender {
+  // zmq address to use for signaling between sender and forwarder
+  const string signaling_bind_address_zmq_;
+  zmq::context_t ctx_;
+  zmq::socket_t sock_;
+
+  shared_ptr<rtc::PeerConnection> pc_;
+  shared_ptr<rtc::Track> video_track_;
+
+  const string hostname_; // hostname to bind to for receiving rtp packets
+
+  int udp_listen_port_; // port to expect udp rtp on
+
+  string topic_;
+
+public:
+  ~Sender() { std::cout << *this << "destroying" << std::endl; }
+  friend ostream &operator<<(ostream &os, const Sender &s) {
+    os << "Sender on topic " << s.topic_ << " with rtp udp port "
+       << s.udp_listen_port_ << ": ";
+    return os;
+  }
+
+  void checkOpen() {
+    std::cout << *this << "track open? " << video_track_->isOpen() << std::endl;
+  }
+
+  Sender(const Sender &other) = delete;
+  Sender(Sender &&other) = delete;
+
+  Sender(const SenderConfig &sender_cfg)
+      : signaling_bind_address_zmq_{sender_cfg.signaling_address},
+        sock_{ctx_, zmq::socket_type::rep}, hostname_(sender_cfg.udp_hostname),
+        udp_listen_port_(sender_cfg.udp_port), topic_(sender_cfg.topic) {
+    std::cout << *this << "Constructing stream Sender with zmq address="
+              << sender_cfg.signaling_address
+              << ", udp hostname=" << sender_cfg.udp_hostname
+              << ", udp port=" << sender_cfg.udp_port << std::endl;
+    sock_.bind(signaling_bind_address_zmq_);
+    pc_ = std::make_shared<rtc::PeerConnection>();
+
+    pc_->onStateChange([this](rtc::PeerConnection::State state) {
+      std::cout << *this << "State: " << state << std::endl;
+      if (state == rtc::PeerConnection::State::Connected) {
+        std::cout << *this << "connected." << std::endl;
+      }
+    });
+
+    pc_->onGatheringStateChange(
+        [this](rtc::PeerConnection::GatheringState state) {
+          std::cout << *this << "Gathering State: " << state << std::endl;
+          if (state == rtc::PeerConnection::GatheringState::Complete) {
+            auto description = this->pc_->localDescription();
+            json message = {{"type", description->typeString()},
+                            {"sdp", std::string(description.value())}};
+
+            zmq::message_t answer_msg(message.dump());
+            sock_.send(answer_msg);
+            std::cout << *this << "sent answer " << message.dump() << std::endl;
+          }
+        });
+
+    pc_->onTrack([this](shared_ptr<rtc::Track> track) {
+      std::cout << *this << "onTrack()" << std::endl;
+      rtc::Description::Media media = track->description();
+      media.addSSRC(42, "video-send");
+      track->setDescription(media);
+      this->video_track_ = track;
+      std::cout << *this << "added track" << std::endl;
+      this->video_track_->onClosed([this]() {
+        std::cout << *this << "VIDEO TRACK CLOSED" << std::endl;
+      });
+      this->video_track_->onError([this](string error) {
+        std::cout << *this << "VIDEO TRACK ERROR: " << error << std::endl;
+      });
+
+      this->video_track_->onOpen([this]() {
+        std::cout << *this << "track now open!" << std::endl;
+
+        int sock;
+        int err;
+        struct addrinfo hints = {}, *addrs;
+        char port_str[16] = {};
+
+        hints.ai_family = AF_INET;
+        hints.ai_socktype = SOCK_DGRAM;
+        hints.ai_protocol = 0;
+
+        sprintf(port_str, "%d", udp_listen_port_);
+
+        std::cout << *this << "binding udp socket to " << hostname_ << ":"
+                  << port_str << std::endl;
+        err = getaddrinfo(this->hostname_.c_str(), port_str, &hints, &addrs);
+        if (err != 0) {
+          fprintf(stderr, "Could not resolve %s: %s\n", this->hostname_.c_str(),
+                  gai_strerror(err));
+          abort();
+        }
+
+        for (struct addrinfo *addr = addrs; addr != NULL;
+             addr = addr->ai_next) {
+          sock = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
+          if (sock == -1) {
+            err = errno;
+            break;
+          }
+
+          std::cout << *this << "Binding to " << this->hostname_ << ":"
+                    << udp_listen_port_ << std::endl;
+
+          if (::bind(sock, addr->ai_addr, addr->ai_addrlen) == 0)
+            break; // BOUND, leave loop
+
+          err = errno;
+
+          close(sock);
+          sock = -1;
+        }
+
+        freeaddrinfo(addrs);
+
+        if (sock == -1) {
+          throw std::runtime_error("Failed to bind UDP socket on " +
+                                   this->hostname_ + ":" +
+                                   to_string(udp_listen_port_));
+          abort();
+        }
+
+        constexpr int rcvBufSize = 212992;
+        setsockopt(sock, SOL_SOCKET, SO_RCVBUF,
+                   reinterpret_cast<const char *>(&rcvBufSize),
+                   sizeof(rcvBufSize));
+
+        constexpr int BUFFER_SIZE = 2048;
+        char buffer[BUFFER_SIZE];
+        int len;
+        while ((len = recv(sock, buffer, BUFFER_SIZE, 0)) >= 0) {
+          if (len < sizeof(rtc::RtpHeader) || !this->video_track_->isOpen()) {
+            std::cout
+                << *this
+                << "Packet smaller than header, or track not open anymore."
+                << std::endl;
+            continue;
+          }
+
+          auto rtp = reinterpret_cast<rtc::RtpHeader *>(buffer);
+          rtp->setSsrc(SSRC);
+
+          std::cout << *this << "received RTP data: " << len << std::endl;
+          try {
+            this->video_track_->send(
+                reinterpret_cast<const std::byte *>(buffer), len);
+          } catch (const std::runtime_error &re) {
+            std::cerr << *this
+                      << "Runtime error in sender->onOpen: " << re.what()
+                      << std::endl;
+          } catch (const std::exception &ex) {
+            std::cerr << *this
+                      << "Error occurred in sender->onOpen: " << ex.what()
+                      << std::endl;
+          } catch (...) {
+            // catch any other errors (that we have no information about)
+            std::cerr << *this << "Unknown failure occurred in sender->onOpen."
+                      << std::endl;
+          }
+          /* std::cout << "Sender did send on track data: " << len << std::endl;
+           */
+        }
+        std::cerr << *this << "left loop due to empty packet." << std::endl
+                  << std::flush;
+        abort();
+      });
+    });
+
+    zmq::message_t sfu_offer_msg;
+    sock_.recv(sfu_offer_msg);
+    std::cout << *this << "received offer: " << sfu_offer_msg.to_string()
+              << std::endl;
+    const json parsed_offer = json::parse(sfu_offer_msg.to_string());
+    const rtc::Description offer(parsed_offer["sdp"].get<string>(),
+                                 parsed_offer["type"].get<string>());
+    this->pc_->setRemoteDescription(offer);
+    std::cout << *this << "set local description" << std::endl;
+  }
+};
 
 class VideoStreamMonitor {
 private:
@@ -47,7 +254,6 @@ VideoStreamMonitor::VideoStreamMonitor(const string& host,
     transmitter(host, port, fps, 1, bitrate), queue(1), has_printed_sdp(false) {
   stop.store(false);
   av_log_set_level(AV_LOG_QUIET);
-  std::cout << "Streaming to " << host << ":" << port << std::endl;
   encoder = std::thread([&]() {
     while (!stop.load()) {
       // const auto queue_status = queue.try_pull_front(image);
@@ -57,21 +263,8 @@ VideoStreamMonitor::VideoStreamMonitor(const string& host,
       //   std::this_thread::sleep_for(std::chrono::milliseconds(5));
       //   continue;
       // }
-      std::cout << "Begin encode " << std::setprecision(5) << std::fixed
-                << duration_cast<milliseconds>(
-                       system_clock::now().time_since_epoch())
-                           .count() /
-                       1000.0
-                << std::endl;
       auto tic = current_millis();
       transmitter.encode_frame(image);
-      std::cout << "Took " << 1000 * (current_millis() - tic) << std::endl;
-      std::cout << "Encoded at " << std::setprecision(5) << std::fixed
-                << duration_cast<milliseconds>(
-                       system_clock::now().time_since_epoch())
-                           .count() /
-                       1000.0
-                << std::endl;
 
       if (!has_printed_sdp) {
         has_printed_sdp = true;
@@ -80,13 +273,11 @@ VideoStreamMonitor::VideoStreamMonitor(const string& host,
         std::cout << "SDP file is: \r\n" << sdp << std::endl;
         std::cout << "------------\r\nSDP file ended" << std::endl;
       }
-      // data->releaseLock();
     }
   });
 }
 
 VideoStreamMonitor::~VideoStreamMonitor() {
-  std::cout << "Deleting Monitor..." << std::endl;
   stop.store(true);
   encoder.join();
   queue.close();
@@ -94,7 +285,6 @@ VideoStreamMonitor::~VideoStreamMonitor() {
 
 void VideoStreamMonitor::process(cv::Mat data) {
   if (!queue.full()) {
-    // data->getLock();
     queue.push_back(data);
   }
 }
@@ -107,43 +297,37 @@ int main(int argc, char* argv[]) {
 
   ValueArg<int> zmq_port("", "port", "port of incoming zmq messages", false,
                          6001, "Port as Integer", cmdline);
-  ValueArg<string> zmq_user("u", "user", "user to authenticate at zmq", false,
+  ValueArg<string> zmq_user("u", "user", "user for zmq authentication", false,
                             "developer", "user as string", cmdline);
-  ValueArg<string> zmq_pw("p", "password", "password to authenticate at zmq",
+  ValueArg<string> zmq_pw("", "zmq-password", "password for zmq authentication",
                           false, "psiori", "password as string", cmdline);
   ValueArg<string> zmq_topic("t", "topic", "topic to filter zmq messages",
                              false, "", "topic as string", cmdline);
 
-  ValueArg<string> rtp_host("R", "receiver", "receiver of the rtp stream",
-                            false, "127.0.0.1", "Receiver as String", cmdline);
-  ValueArg<int> rtp_port("", "stream-port", "port of stream", false, 8000,
-                         "Port as Integer", cmdline);
+  ValueArg<string> mediaserver_host("m", "mediaserver", "mediaserver IP", false,
+                                    "127.0.0.1", "Ip address", cmdline);
+  ValueArg<int> mediaserver_ws_port(
+      "", "stream-port", "WebSocket port on the mediaserver for setup", false,
+      8080, "Port", cmdline);
+  ValueArg<string> mediaserver_pw(
+      "", "mediaserver-password", "password for mediaserver authentication",
+      false, "secretpassword", "password as string", cmdline);
   ValueArg<int> rtp_fps(
       "f", "fps", "fps of stream", false, 20, "fps as Integer", cmdline);
-  ValueArg<long> rtp_bitrate("b", "bitrate", "bitrate of stream", false, 100000,
+  ValueArg<long> rtp_bitrate("b", "bitrate", "bitrate of stream", false, 4e6,
                              "Bitrate as Integer", cmdline);
   SwitchArg bgr("", "bgr", "switch channels before sending", cmdline, true);
   cmdline.parse(argc, argv);
+
   zmq::context_t ctx(1);
   zmq::socket_t socket(ctx, ZMQ_SUB);
 
-  const string host  = zmq_host.getValue();
-  int port           = zmq_port.getValue();
-  const string user  = zmq_user.getValue();
-  const string pw    = zmq_pw.getValue();
-  const string topic = zmq_topic.getValue();
 
-  socket.set(zmq::sockopt::plain_username, user);
-  socket.set(zmq::sockopt::plain_password, pw);
-  socket.set(zmq::sockopt::rcvhwm, 2);
-  socket.set(zmq::sockopt::subscribe, topic);
-  const auto connect_str = string("tcp://") + host + ":" + std::to_string(port);
-  socket.connect(connect_str);
-  std::cout << "Connected zmq socket to " << connect_str
-            << ", on topic: " << topic << std::endl;
-  std::cout << "Starting main" << std::endl;
+  connect_socket(socket, zmq_host.getValue(), zmq_port.getValue(),
+                 zmq_user.getValue(), zmq_pw.getValue(), zmq_topic.getValue());
 
-  VideoStreamMonitor streamer(rtp_host.getValue(), rtp_port.getValue(),
+
+  VideoStreamMonitor streamer("127.0.0.1", get_free_port(),
                               rtp_fps.getValue(), rtp_bitrate.getValue());
 
   zmq::message_t recv_topic;
@@ -180,4 +364,24 @@ int main(int argc, char* argv[]) {
               << " Hz" << std::endl;
     cycle_tic = current_millis();
   }
+}
+
+void connect_socket(zmq::socket_t& socket,
+                    const string& host,
+                    int port,
+                    const string& user,
+                    const string& pw,
+                    const string& topic) {
+  socket.set(zmq::sockopt::plain_username, user);
+  socket.set(zmq::sockopt::plain_password, pw);
+  socket.set(zmq::sockopt::rcvhwm, 2);
+  socket.set(zmq::sockopt::subscribe, topic);
+  const auto connect_str = string("tcp://") + host + ":" + std::to_string(port);
+  socket.connect(connect_str);
+  std::cout << "Connected zmq socket to " << connect_str
+            << ", on topic: " << topic << std::endl;
+}
+
+int get_free_port() {
+    return 6000;
 }
