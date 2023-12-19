@@ -50,15 +50,16 @@ set(ENCODER_SRC ${CMAKE_CURRENT_LIST_DIR}/avtransmitter.cpp)
 set(DECODER_SRC ${CMAKE_CURRENT_LIST_DIR}/avreceiver.cpp ${CMAKE_CURRENT_LIST_DIR}/rtp_receiver.cpp)
 set(ZMQ_ENCODER_SRC ${CMAKE_CURRENT_LIST_DIR}/encode_from_zmq.cpp
     ${CMAKE_CURRENT_LIST_DIR}/avtransmitter.cpp ${COMMON_SRC})
+add_executable(encode_video_fromdir)
+target_sources(encode_video_fromdir PRIVATE ${CMAKE_CURRENT_LIST_DIR}/encode_video_fromdir.cpp ${ENCODER_SRC} ${COMMON_SRC})
+target_include_directories(encode_video_fromdir PRIVATE ${LOCAL_INCLUDE_DIRS})
+target_include_directories(encode_video_fromdir SYSTEM PRIVATE ${THIRD_PARTY_INCLUDE_DIRS})
 
 option(BUILD_zmq_encoder OFF)
 if (BUILD_zmq_encoder)
+    find_package(Poco REQUIRED COMPONENTS Crypto JWT)
     find_package(LibDataChannel REQUIRED)
     find_package(nlohmann_json REQUIRED)
-    add_executable(encode_video_fromdir)
-    target_sources(encode_video_fromdir PRIVATE ${CMAKE_CURRENT_LIST_DIR}/encode_video_fromdir.cpp ${ENCODER_SRC} ${COMMON_SRC})
-    target_include_directories(encode_video_fromdir PRIVATE ${LOCAL_INCLUDE_DIRS})
-    target_include_directories(encode_video_fromdir SYSTEM PRIVATE ${THIRD_PARTY_INCLUDE_DIRS})
     target_link_libraries(encode_video_fromdir ${THIRD_PARTY_LIBRARIES}
         LibDataChannel::LibDataChannel nlohmann_json::nlohmann_json)
 
@@ -66,7 +67,8 @@ if (BUILD_zmq_encoder)
     target_sources(encode_from_zmq PRIVATE ${ZMQ_ENCODER_SRC} ${COMMON_SRC})
     target_include_directories(encode_from_zmq PRIVATE ${LOCAL_INCLUDE_DIRS})
     target_include_directories(encode_from_zmq SYSTEM PRIVATE ${THIRD_PARTY_INCLUDE_DIRS})
-    target_link_libraries(encode_from_zmq ${THIRD_PARTY_LIBRARIES})
+    target_link_libraries(encode_from_zmq ${THIRD_PARTY_LIBRARIES} nlohmann_json::nlohmann_json
+        LibDataChannel::LibDataChannel Poco::Crypto Poco::JWT)
 
     add_executable(decode_video_zmq)
     target_sources(decode_video_zmq PRIVATE ${CMAKE_CURRENT_LIST_DIR}/decode_video_zmq.cpp ${DECODER_SRC} ${COMMON_SRC})
