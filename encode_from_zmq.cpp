@@ -40,7 +40,7 @@ void connect_socket(zmq::socket_t& socket,
                     const string& topic);
 int get_free_port();
 
-struct SenderConfig {
+struct WebRTCBridgeConfig {
   string topic;
   int udp_port;
   string udp_hostname;
@@ -74,7 +74,7 @@ get_signed_serialized_token(const std::string& key, const std::string& topic) {
 
 }  // namespace auth
 
-class Sender {
+class WebRTCBridge {
   shared_ptr<rtc::PeerConnection> pc_;
   shared_ptr<rtc::Track> video_track_;
 
@@ -89,11 +89,11 @@ class Sender {
   PortRange port_range_;
 
 public:
-  ~Sender() {
+  ~WebRTCBridge() {
     std::cout << *this << "destroying" << std::endl;
   }
-  friend ostream& operator<<(ostream& os, const Sender& s) {
-    os << "Sender on topic " << s.topic_ << " with rtp udp port "
+  friend ostream& operator<<(ostream& os, const WebRTCBridge& s) {
+    os << "WebRTCBridge on topic " << s.topic_ << " with rtp udp port "
        << s.udp_listen_port_ << ": ";
     return os;
   }
@@ -102,10 +102,10 @@ public:
     std::cout << *this << "track open? " << video_track_->isOpen() << std::endl;
   }
 
-  Sender(const Sender& other) = delete;
-  Sender(Sender&& other)      = delete;
+  WebRTCBridge(const WebRTCBridge& other) = delete;
+  WebRTCBridge(WebRTCBridge&& other)      = delete;
 
-  Sender(const SenderConfig& sender_cfg) :
+  WebRTCBridge(const WebRTCBridgeConfig& sender_cfg) :
       hostname_(sender_cfg.udp_hostname),
       udp_listen_port_(sender_cfg.udp_port),
       topic_(sender_cfg.topic),
@@ -373,20 +373,20 @@ void VideoStreamMonitor::process(cv::Mat data) {
 int main(int argc, char* argv[]) {
   CmdLine cmdline("Recieve zmq (from KAI-core), send via RTP");
 
-  ValueArg<string> zmq_host("H", "zmq-host", "host of incoming zmq messages", false,
-                            "127.0.0.1", "Host as String", cmdline);
+  ValueArg<string> zmq_host("H", "zmq-host", "host of incoming zmq messages",
+                            false, "127.0.0.1", "Host as String", cmdline);
 
   ValueArg<int> zmq_port("", "zmq-port", "port of incoming zmq messages", true,
                          0, "Port as Integer", cmdline);
-  ValueArg<string> zmq_user("u", "zmq-user", "user for zmq authentication", true,
-                            "", "user as string", cmdline);
+  ValueArg<string> zmq_user("u", "zmq-user", "user for zmq authentication",
+                            true, "", "user as string", cmdline);
   ValueArg<string> zmq_pw("", "zmq-password", "password for zmq authentication",
                           false, "psiori", "password as string", cmdline);
-  ValueArg<string> mediaserver_pw(
-      "", "mediaserver-password", "password for mediaserver authentication",
-      false, "secretpassword", "password as string", cmdline);
-  ValueArg<string> topic("t", "topic", "topic of the stream", true,
-                         "", "topic as string", cmdline);
+  ValueArg<string> mediaserver_pw("", "mediaserver-password",
+                                  "password for mediaserver authentication",
+                                  true, "", "password as string", cmdline);
+  ValueArg<string> topic("t", "topic", "topic of the stream", true, "",
+                         "topic as string", cmdline);
 
   ValueArg<string> mediaserver_host("m", "mediaserver", "mediaserver IP", false,
                                     "127.0.0.1", "Ip address", cmdline);
@@ -409,16 +409,16 @@ int main(int argc, char* argv[]) {
 
   const int rtp_port = get_free_port();
 
-  SenderConfig cfg{.topic            = topic.getValue(),
-                   .udp_port         = rtp_port,
-                   .udp_hostname     = "127.0.0.1",
-                   .mediaserver_host = mediaserver_host.getValue(),
-                   .mediaserver_port = mediaserver_ws_port.getValue(),
-                   .begin_port       = rtc::Configuration().portRangeBegin,
-                   .end_port         = rtc::Configuration().portRangeEnd,
-                   .pw               = mediaserver_pw.getValue()};
+  WebRTCBridgeConfig cfg{.topic            = topic.getValue(),
+                         .udp_port         = rtp_port,
+                         .udp_hostname     = "127.0.0.1",
+                         .mediaserver_host = mediaserver_host.getValue(),
+                         .mediaserver_port = mediaserver_ws_port.getValue(),
+                         .begin_port = rtc::Configuration().portRangeBegin,
+                         .end_port   = rtc::Configuration().portRangeEnd,
+                         .pw         = mediaserver_pw.getValue()};
 
-  Sender rtp2webrtc_bridge(cfg);
+  WebRTCBridge rtp2webrtc_bridge(cfg);
 
 
   VideoStreamMonitor streamer(
